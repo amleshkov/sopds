@@ -20,33 +20,46 @@ All dependencies are installed with:
     yum install python3                            # setup command for RHEL, Fedora, CentOS
     python3 -m pip install -r requirements.txt
 
-1.3 We initialize the database and fill in the initial data (genres)
+1.3 Environment variables
+
+The application is configured through environment variables:
+
+    SOPDS_SECRET_KEY      required, Django secret key
+    SOPDS_DEBUG           True/False, default False
+    SOPDS_ALLOWED_HOSTS   comma-separated list of allowed hosts
+    SOPDS_DB_HOST         PostgreSQL host; when set, PostgreSQL is used instead of sqlite3
+    SOPDS_DB_NAME         PostgreSQL database name (default: sopds)
+    SOPDS_DB_USER         PostgreSQL user (default: sopds)
+    SOPDS_DB_PASSWORD     PostgreSQL password (default: sopds)
+    SOPDS_DB_PORT         PostgreSQL port (default: 5432)
+
+1.4 We initialize the database and fill in the initial data (genres)
 
 	python3 manage.py migrate
 	python3 manage.py sopds_util clear
 
-1.4 Creating a Superuser
+1.5 Creating a Superuser
 
 	python3 manage.py createsuperuser
 
-1.5 We adjust the path to your catalog with books and, if necessary, switch the interface language to English
+1.6 We adjust the path to your catalog with books and, if necessary, switch the interface language to English
 
 	python3 manage.py sopds_util setconf SOPDS_ROOT_LIB 'Path to the directory with books'
 	python3 manage.py sopds_util setconf SOPDS_LANGUAGE en-EN
 
-1.6 Launch the SCANNER server (optional, required for automated periodic re-scanning of the collection)
+1.7 Launch the SCANNER server (optional, required for automated periodic re-scanning of the collection)
     Please note that the default settings specify a periodic scan start 2 times a day 12:00 and 0:00.
 
 	python3 manage.py sopds_scanner start --daemon
 
-1.7 Starting the built-in HTTP / OPDS server
+1.8 Starting the built-in HTTP / OPDS server
 
 	python3 manage.py sopds_server start --daemon
 
 However, the best way is still to configure the HTTP / OPDS servers as Apache or Nginx
 (entry point ./sopds/wsgi.py)
 
-1.8 In order not to wait for the start of a scheduled scan, you can tell the sopds_scanner process about the need immediate scanning. You can do this by setting the configuration parameter SOPDS_SCAN_START_DIRECTLY = True two ways:
+1.9 In order not to wait for the start of a scheduled scan, you can tell the sopds_scanner process about the need immediate scanning. You can do this by setting the configuration parameter SOPDS_SCAN_START_DIRECTLY = True two ways:
 
 a) from the console using the command
 
@@ -55,7 +68,7 @@ a) from the console using the command
 b) With the help of the Web-interface administration page http://<Your server>:8001/admin/
    (FCONSTANCE -> Settings -> 1. General Options -> SOPDS_SCAN_START_DIRECTLY)
 
-1.9 Access to information
+1.10 Access to information
 If all previous steps were successful, then the library can be accessed by the following URLs:
 
 >     OPDS-version: http://<Your server>:8001/opds/

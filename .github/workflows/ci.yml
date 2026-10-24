@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  SOPDS_SECRET_KEY: ci-only-non-production-secret-key
+
 jobs:
   test:
     runs-on: ubuntu-latest

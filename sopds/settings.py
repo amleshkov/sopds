@@ -14,6 +14,7 @@ import os
 import sys
 from collections import OrderedDict
 
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import ugettext_lazy as _
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -22,13 +23,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'm4l1c#nq6*zs!c3ri4dg4(54_7bvrl5uintni6p20tijlaxv!x'
+SECRET_KEY = os.environ.get('SOPDS_SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured('SOPDS_SECRET_KEY environment variable is not set')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('SOPDS_DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('SOPDS_ALLOWED_HOSTS', '').split(',') if h.strip()]
 
 # Application definition
 INSTALLED_APPS = [
