@@ -3,6 +3,7 @@ from django.utils.translation import ugettext as _
 from django.utils.feedgenerator import Atom1Feed, Enclosure, rfc3339_date
 from django.contrib.syndication.views import Feed
 from django.urls import reverse
+from django.http import Http404
 from django.shortcuts import render
 from django.db.models import Count, Min
 from django.utils.html import strip_tags
@@ -21,19 +22,21 @@ from constance import config
 
 class AuthFeed(Feed):
     request = None
-    def __call__(self,request,*args,**kwargs):
-        self.request = request
-        if config.SOPDS_AUTH:
-            if request.user.is_authenticated:
-                return super().__call__(request,*args,**kwargs)
-        
-        bau = BasicAuthMiddleware()
-        result=bau.process_request(self.request)
-        
-        if result!=None:
+
+    def __call__(self, request, *args, **kwargs):
+        if config.SOPDS_AUTH and request.user.is_authenticated:
+            return self.serve(request, *args, **kwargs)
+
+        result = BasicAuthMiddleware().process_request(request)
+        if result is not None:
             return result
-        
-        return super().__call__(request,*args,**kwargs)
+
+        return self.serve(request, *args, **kwargs)
+
+    def serve(self, request, *args, **kwargs):
+        feed = self.__class__()
+        feed.request = request
+        return Feed.__call__(feed, request, *args, **kwargs)
 
 class opdsEnclosure(Enclosure):
     def __init__(self, url, mime_type, rel):
@@ -1029,8 +1032,11 @@ class GenresFeed(AuthFeed):
         if section_id==0:
             dataset = Genre.objects.values('section').annotate(section_id=Min('id'), num_book=Count('book')).filter(num_book__gt=0).order_by('section')
         else:
-            section = Genre.objects.get(id=section_id).section
-            dataset = Genre.objects.filter(section=section).annotate(num_book=Count('book')).filter(num_book__gt=0).values().order_by('subsection')       
+            try:
+                section = Genre.objects.get(id=section_id).section
+            except Genre.DoesNotExist:
+                raise Http404
+            dataset = Genre.objects.filter(section=section).annotate(num_book=Count('book')).filter(num_book__gt=0).values().order_by('subsection')
         return dataset
 
     def item_title(self, item):
