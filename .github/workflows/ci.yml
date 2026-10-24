@@ -20,3 +20,61 @@ jobs:
 
       - name: Run tests
         run: python manage.py test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Generate test library
+        run: python scripts/make_testbooks.py testdata
+
+      - name: Build image and start postgres and server
+        run: docker compose up -d --build postgres sopds-server
+
+      - name: Run scanner once
+        run: docker compose run --rm sopds-scanner scanner scan
+
+      - name: Check scanner loaded books into database
+        run: |
+          COUNT=$(docker compose exec -T postgres psql -U sopds -d sopds -tAc "select count(*) from opds_catalog_book")
+          echo "books in db: $COUNT"
+          [ "$COUNT" -eq 6 ]
+
+      - name: Check OPDS main feed
+        run: curl -sf http://localhost:8001/opds/ | grep -q 'books: 6'
+
+      - name: Check OPDS search and download of a loose book
+        run: |
+          TERM=$(python3 -c "import urllib.parse; print(urllib.parse.quote('рыбаке'))")
+          PAGE=$(curl -sf "http://localhost:8001/opds/search/books/m/$TERM/")
+          echo "$PAGE" | grep -q 'Сказка о рыбаке и рыбке'
+          PATH_=$(echo "$PAGE" | grep -oE '/opds/download/[0-9]+/0/' | head -1)
+          curl -sf "http://localhost:8001$PATH_" -o /tmp/dl_loose.fb2
+          md5sum /tmp/dl_loose.fb2 testdata/alexander_pushkin.fb2
+          [ "$(md5sum /tmp/dl_loose.fb2 | cut -d' ' -f1)" = "$(md5sum testdata/alexander_pushkin.fb2 | cut -d' ' -f1)" ]
+
+      - name: Check OPDS download of a book from zip archive
+        run: |
+          TERM=$(python3 -c "import urllib.parse; print(urllib.parse.quote('Хамелеон'))")
+          PAGE=$(curl -sf "http://localhost:8001/opds/search/books/m/$TERM/")
+          echo "$PAGE" | grep -q 'Хамелеон'
+          PATH_=$(echo "$PAGE" | grep -oE '/opds/download/[0-9]+/0/' | head -1)
+          curl -sf "http://localhost:8001$PATH_" -o /tmp/dl_zip.fb2
+          unzip -p testdata/sopds_anthology.zip anton_chekhov.fb2 > /tmp/expected_zip.fb2
+          md5sum /tmp/dl_zip.fb2 /tmp/expected_zip.fb2
+          [ "$(md5sum /tmp/dl_zip.fb2 | cut -d' ' -f1)" = "$(md5sum /tmp/expected_zip.fb2 | cut -d' ' -f1)" ]
+
+      - name: Check web UI search
+        run: |
+          TERM=$(python3 -c "import urllib.parse; print(urllib.parse.quote('Муму'))")
+          curl -sf "http://localhost:8001/web/search/books/?searchtype=m&searchterms=$TERM" | grep -q '/opds/download/'
+          curl -sf -o /dev/null -w '%{http_code} %{content_type}\n' http://localhost:8001/opds/cover/1/
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v --remove-orphans

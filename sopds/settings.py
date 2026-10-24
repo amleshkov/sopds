@@ -111,12 +111,24 @@ WSGI_APPLICATION = 'sopds.wsgi.application'
 #    }
 #}
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }         
-}
+if os.environ.get('SOPDS_DB_HOST'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ.get('SOPDS_DB_NAME', 'sopds'),
+            'USER': os.environ.get('SOPDS_DB_USER', 'sopds'),
+            'PASSWORD': os.environ.get('SOPDS_DB_PASSWORD', 'sopds'),
+            'HOST': os.environ.get('SOPDS_DB_HOST'),
+            'PORT': os.environ.get('SOPDS_DB_PORT', ''),
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
 
 #### SOPDS DATABASE SETTINGS FINISH ####
 

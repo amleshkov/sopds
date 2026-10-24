@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sopds
+      POSTGRES_USER: sopds
+      POSTGRES_PASSWORD: sopds
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sopds -d sopds"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  sopds-server:
+    build: .
+    command: ["server"]
+    environment: &app_env
+      SOPDS_DB_HOST: postgres
+      SOPDS_DB_NAME: sopds
+      SOPDS_DB_USER: sopds
+      SOPDS_DB_PASSWORD: sopds
+      SOPDS_SERVER_HOST: sopds-server
+      SOPDS_PORT: "8001"
+    ports:
+      - "8001:8001"
+    volumes:
+      - ${SOPDS_LIB_DIR:-./testdata}:/data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/opds/', timeout=3)"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  sopds-scanner:
+    build: .
+    command: ["scanner", "start"]
+    environment: *app_env
+    volumes:
+      - ${SOPDS_LIB_DIR:-./testdata}:/data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sopds-server:
+        condition: service_healthy
+
+volumes:
+  pgdata:
