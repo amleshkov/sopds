@@ -408,22 +408,22 @@ def BooksView(request):
         
     length = len(chars)+1
     if lang_code:
-        sql="""select %(length)s as l, substring(search_title,1,%(length)s) as id, count(*) as cnt 
-               from opds_catalog_book 
-               where lang_code=%(lang_code)s and search_title like '%(chars)s%%%%'
-               group by substring(search_title,1,%(length)s) 
-               order by id"""%{'length':length, 'lang_code':lang_code, 'chars':chars}
+        sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
+               from opds_catalog_book
+               where lang_code=%s and search_title like %s
+               group by substring(search_title,1,%s)
+               order by id"""
+        items = Book.objects.raw(sql, [length, length, lang_code, chars + '%', length])
     else:
-        sql="""select %(length)s as l, substring(search_title,1,%(length)s) as id, count(*) as cnt 
-               from opds_catalog_book 
-               where search_title like '%(chars)s%%%%'
-               group by substring(search_title,1,%(length)s) 
-               order by id"""%{'length':length,'chars':chars}
-      
-    items = Book.objects.raw(sql)
-          
+        sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
+               from opds_catalog_book
+               where search_title like %s
+               group by substring(search_title,1,%s)
+               order by id"""
+        items = Book.objects.raw(sql, [length, length, chars + '%', length])
+
     args['items']=items
-    args['current'] = 'book'      
+    args['current'] = 'book'
     args['lang_code'] = lang_code   
     args['breadcrumbs'] =  [_('Books'),_('Select'),lang_menu[lang_code],chars]
     args['cache_id'] = '%s:%s:%s' % (args['current'],lang_code, chars)
@@ -445,22 +445,22 @@ def AuthorsView(request):
         
     length = len(chars)+1
     if lang_code:
-        sql="""select %(length)s as l, substring(search_full_name,1,%(length)s) as id, count(*) as cnt 
-               from opds_catalog_author 
-               where lang_code=%(lang_code)s and search_full_name like '%(chars)s%%%%'
-               group by substring(search_full_name,1,%(length)s) 
-               order by id"""%{'length':length, 'lang_code':lang_code, 'chars':chars}
+        sql = """select %s as l, substring(search_full_name,1,%s) as id, count(*) as cnt
+               from opds_catalog_author
+               where lang_code=%s and search_full_name like %s
+               group by substring(search_full_name,1,%s)
+               order by id"""
+        items = Author.objects.raw(sql, [length, length, lang_code, chars + '%', length])
     else:
-        sql="""select %(length)s as l, substring(search_full_name,1,%(length)s) as id, count(*) as cnt 
-               from opds_catalog_author 
-               where search_full_name like '%(chars)s%%%%'
-               group by substring(search_full_name,1,%(length)s) 
-               order by id"""%{'length':length,'chars':chars}
-      
-    items = Author.objects.raw(sql)
-          
+        sql = """select %s as l, substring(search_full_name,1,%s) as id, count(*) as cnt
+               from opds_catalog_author
+               where search_full_name like %s
+               group by substring(search_full_name,1,%s)
+               order by id"""
+        items = Author.objects.raw(sql, [length, length, chars + '%', length])
+
     args['items']=items
-    args['current'] = 'author'      
+    args['current'] = 'author'   
     args['lang_code'] = lang_code   
     args['breadcrumbs'] =  [_('Authors'),_('Select'),lang_menu[lang_code],chars]
     args['cache_id'] = '%s:%s:%s' % (args['current'],lang_code, chars)
@@ -482,19 +482,19 @@ def SeriesView(request):
         
     length = len(chars)+1
     if lang_code:
-        sql="""select %(length)s as l, substring(search_ser,1,%(length)s) as id, count(*) as cnt 
-               from opds_catalog_series 
-               where lang_code=%(lang_code)s and search_ser like '%(chars)s%%%%'
-               group by substring(search_ser,1,%(length)s)
-               order by id"""%{'length':length, 'lang_code':lang_code, 'chars':chars}
+        sql = """select %s as l, substring(search_ser,1,%s) as id, count(*) as cnt
+               from opds_catalog_series
+               where lang_code=%s and search_ser like %s
+               group by substring(search_ser,1,%s)
+               order by id"""
+        items = Series.objects.raw(sql, [length, length, lang_code, chars + '%', length])
     else:
-        sql="""select %(length)s as l, substring(search_ser,1,%(length)s) as id, count(*) as cnt 
-               from opds_catalog_series 
-               where search_ser like '%(chars)s%%%%'
-               group by substring(search_ser,1,%(length)s) 
-               order by id"""%{'length':length,'chars':chars}
-      
-    items = Series.objects.raw(sql)
+        sql = """select %s as l, substring(search_ser,1,%s) as id, count(*) as cnt
+               from opds_catalog_series
+               where search_ser like %s
+               group by substring(search_ser,1,%s)
+               order by id"""
+        items = Series.objects.raw(sql, [length, length, chars + '%', length])
           
     args['items']=items
     args['current'] = 'series'      

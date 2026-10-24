@@ -852,26 +852,26 @@ class BooksFeed(AuthFeed):
     def items(self, obj):
         length, chars = obj
         if self.lang_code:
-            sql="""select %(length)s as l, substring(search_title,1,%(length)s) as id, count(*) as cnt 
-                   from opds_catalog_book 
-                   where lang_code=%(lang_code)s and search_title like '%(chars)s%%%%'
-                   group by substring(search_title,1,%(length)s)
-                   order by id"""%{'length':length, 'lang_code':self.lang_code, 'chars':chars}
+            sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
+                   from opds_catalog_book
+                   where lang_code=%s and search_title like %s
+                   group by substring(search_title,1,%s)
+                   order by id"""
+            dataset = Book.objects.raw(sql, [length, length, self.lang_code, chars + '%', length])
         else:
-            sql="""select %(length)s as l, substring(search_title,1,%(length)s) as id, count(*) as cnt 
-                   from opds_catalog_book 
-                   where search_title like '%(chars)s%%%%'
-                   group by substring(search_title,1,%(length)s)
-                   order by id"""%{'length':length,'chars':chars}
-          
-        dataset = Book.objects.raw(sql)
+            sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
+                   from opds_catalog_book
+                   where search_title like %s
+                   group by substring(search_title,1,%s)
+                   order by id"""
+            dataset = Book.objects.raw(sql, [length, length, chars + '%', length])
         return dataset
 
     def item_title(self, item):
         return "%s"%item.id
-    
+
     def item_description(self, item):
-        return _("Found: %s books")%item.cnt    
+        return _("Found: %s books")%item.cnt
 
     def item_link(self, item):
         title_full = len(item.id)<item.l
@@ -910,19 +910,19 @@ class AuthorsFeed(AuthFeed):
     def items(self, obj):
         length, chars = obj
         if self.lang_code:
-            sql="""select %(length)s as l, substring(search_full_name,1,%(length)s) as id, count(*) as cnt 
-                   from opds_catalog_author 
-                   where lang_code=%(lang_code)s and search_full_name like '%(chars)s%%%%'
-                   group by substring(search_full_name,1,%(length)s)
-                   order by id"""%{'length':length, 'lang_code':self.lang_code, 'chars':chars}
+            sql = """select %s as l, substring(search_full_name,1,%s) as id, count(*) as cnt
+                   from opds_catalog_author
+                   where lang_code=%s and search_full_name like %s
+                   group by substring(search_full_name,1,%s)
+                   order by id"""
+            dataset = Author.objects.raw(sql, [length, length, self.lang_code, chars + '%', length])
         else:
-            sql="""select %(length)s as l, substring(search_full_name,1,%(length)s) as id, count(*) as cnt 
-                   from opds_catalog_author 
-                   where search_full_name like '%(chars)s%%%%'
-                   group by substring(search_full_name,1,%(length)s) 
-                   order by id"""%{'length':length,'chars':chars}
-          
-        dataset = Author.objects.raw(sql)
+            sql = """select %s as l, substring(search_full_name,1,%s) as id, count(*) as cnt
+                   from opds_catalog_author
+                   where search_full_name like %s
+                   group by substring(search_full_name,1,%s)
+                   order by id"""
+            dataset = Author.objects.raw(sql, [length, length, chars + '%', length])
         return dataset
 
     def item_title(self, item):
@@ -968,19 +968,19 @@ class SeriesFeed(AuthFeed):
     def items(self, obj):
         length, chars = obj
         if self.lang_code:
-            sql="""select %(length)s as l, substring(search_ser,1,%(length)s) as id, count(*) as cnt 
-                   from opds_catalog_series 
-                   where lang_code=%(lang_code)s and search_ser like '%(chars)s%%%%'
-                   group by substring(search_ser,1,%(length)s) 
-                   order by id"""%{'length':length, 'lang_code':self.lang_code, 'chars':chars}
+            sql = """select %s as l, substring(search_ser,1,%s) as id, count(*) as cnt
+                   from opds_catalog_series
+                   where lang_code=%s and search_ser like %s
+                   group by substring(search_ser,1,%s)
+                   order by id"""
+            dataset = Series.objects.raw(sql, [length, length, self.lang_code, chars + '%', length])
         else:
-            sql="""select %(length)s as l, substring(search_ser,1,%(length)s) as id, count(*) as cnt 
-                   from opds_catalog_series 
-                   where search_ser like '%(chars)s%%%%'
-                   group by substring(search_ser,1,%(length)s) 
-                   order by id"""%{'length':length,'chars':chars}
-          
-        dataset = Series.objects.raw(sql)
+            sql = """select %s as l, substring(search_ser,1,%s) as id, count(*) as cnt
+                   from opds_catalog_series
+                   where search_ser like %s
+                   group by substring(search_ser,1,%s)
+                   order by id"""
+            dataset = Series.objects.raw(sql, [length, length, chars + '%', length])
         return dataset
 
     def item_title(self, item):

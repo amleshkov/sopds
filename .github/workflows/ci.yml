@@ -79,6 +79,13 @@ jobs:
           curl -sf "http://localhost:8001/web/search/books/?searchtype=m&searchterms=$TERM" | grep -q '/opds/download/'
           curl -sf -o /dev/null -w '%{http_code} %{content_type}\n' http://localhost:8001/opds/cover/1/
 
+      - name: Check alphabet drill-down and sql injection payloads
+        run: |
+          curl -sf -o /dev/null 'http://localhost:8001/opds/books/1/'
+          curl -sf -o /dev/null 'http://localhost:8001/web/book/?lang=1'
+          curl -sf -o /dev/null "http://localhost:8001/opds/books/1/%27%3B--/"
+          curl -sf -o /dev/null 'http://localhost:8001/web/author/?lang=1&chars=%27%3B--'
+
       - name: Teardown
         if: always()
         run: docker compose down -v --remove-orphans
