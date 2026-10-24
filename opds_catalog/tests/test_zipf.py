@@ -1,36 +1,60 @@
-import os
+# -*- coding: utf-8 -*-
+
+import io
+import zipfile as stdlib_zipfile
 
 from django.test import TestCase
 
-from opds_catalog import zipf as zipfile
+from constance import config
 
-class zipTestCase(TestCase):
-    test_module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    test_ROOTLIB = os.path.join(test_module_path, 'tests/data')
-    test_zip = "books.zip"
-    test_bad_zip = "badfile.zip"
-
-    def setUp(self):
-        pass
-
-    def test_zip_valid(self):
-        z = zipfile.ZipFile(os.path.join(self.test_ROOTLIB, self.test_zip), 'r', allowZip64=True)
-        filelist = z.namelist()
-        file_size = z.getinfo("539485.fb2").file_size
-        file = z.open("539485.fb2")
-        self.assertListEqual(filelist,["539603.fb2","539485.fb2","539273.fb2"])
-        self.assertEquals(file_size,12293)
-        self.assertEquals(file.read(38), b'<?xml version="1.0" encoding="utf-8"?>')
-        file.close()
+from opds_catalog import zipf
 
 
-    def test_zip_novalid(self):
-        bad_file_count = 0
+def make_cp866_zip():
+    placeholder = b'ABCDEFGHIJ'
+    cp866_name = 'Пушкин.fb2'.encode('cp866')
+    assert len(placeholder) == len(cp866_name)
+
+    buf = io.BytesIO()
+    with stdlib_zipfile.ZipFile(buf, 'w', stdlib_zipfile.ZIP_DEFLATED) as zf:
+        info = stdlib_zipfile.ZipInfo(placeholder.decode('ascii'), (2026, 1, 1, 0, 0, 0))
+        zf.writestr(info, b'book content')
+
+    raw = buf.getvalue()
+    count = raw.count(placeholder)
+    assert count >= 2
+    return io.BytesIO(raw.replace(placeholder, cp866_name))
+
+
+class zipfTestCase(TestCase):
+
+    def test_cp866_zip_names_decoded(self):
+        config.SOPDS_ZIPCODEPAGE = 'cp866'
+        z = zipf.ZipFile(make_cp866_zip(), 'r')
         try:
-            zipfile.ZipFile(os.path.join(self.test_ROOTLIB, self.test_bad_zip), 'r', allowZip64=True)
-        except zipfile.BadZipFile:
-            bad_file_count = 1
+            self.assertEqual(z.namelist(), ['Пушкин.fb2'])
+            self.assertEqual(z.read('Пушкин.fb2'), b'book content')
+        finally:
+            z.close()
 
-        self.assertEquals(bad_file_count, 1)
+    def test_utf8_zip_names_untouched(self):
+        config.SOPDS_ZIPCODEPAGE = 'cp866'
+        buf = io.BytesIO()
+        with stdlib_zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr('Тургенев.fb2', b'data')
+        z = zipf.ZipFile(io.BytesIO(buf.getvalue()), 'r')
+        try:
+            self.assertEqual(z.namelist(), ['Тургенев.fb2'])
+        finally:
+            z.close()
 
-
+    def test_write_zip(self):
+        config.SOPDS_ZIPCODEPAGE = 'cp866'
+        buf = io.BytesIO()
+        z = zipf.ZipFile(buf, 'w', zipf.ZIP_DEFLATED)
+        try:
+            z.writestr(' Pushkin.fb2', b'data')
+        finally:
+            z.close()
+        with stdlib_zipfile.ZipFile(io.BytesIO(buf.getvalue())) as zf:
+            self.assertEqual(zf.namelist(), [' Pushkin.fb2'])

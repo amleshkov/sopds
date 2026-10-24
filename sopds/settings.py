@@ -15,7 +15,7 @@ import sys
 from collections import OrderedDict
 
 from django.core.exceptions import ImproperlyConfigured
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,6 +27,7 @@ SECRET_KEY = os.environ.get('SOPDS_SECRET_KEY')
 if not SECRET_KEY:
     raise ImproperlyConfigured('SOPDS_SECRET_KEY environment variable is not set')
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 DEBUG = os.environ.get('SOPDS_DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('SOPDS_ALLOWED_HOSTS', '').split(',') if h.strip()]
@@ -41,7 +42,6 @@ INSTALLED_APPS = [
     'sopds_web_backend',    
     'django.contrib.admin',   
     'django.contrib.staticfiles',     
-    'constance.backends.database',
     'constance',
 ]
 
@@ -103,7 +103,7 @@ WSGI_APPLICATION = 'sopds.wsgi.application'
 
 #DATABASES = {
 #    'default': {
-#    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#    'ENGINE': 'django.db.backends.postgresql',
 #    'NAME': 'sopds',
 #    'USER': 'sopds',
 #    'PASSWORD': 'sopds',
@@ -115,7 +115,7 @@ WSGI_APPLICATION = 'sopds.wsgi.application'
 if os.environ.get('SOPDS_DB_HOST'):
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('SOPDS_DB_NAME', 'sopds'),
             'USER': os.environ.get('SOPDS_DB_USER', 'sopds'),
             'PASSWORD': os.environ.get('SOPDS_DB_PASSWORD', 'sopds'),
@@ -160,10 +160,8 @@ LOCALE_PATHS = (
 
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
-CACHE_BACKEND = "locmem://"
 CACHE_MIDDLEWARE_KEY_PREFIX = "sopds"
 
 # Static files (CSS, JavaScript, Images)

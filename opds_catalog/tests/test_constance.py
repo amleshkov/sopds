@@ -6,7 +6,6 @@ from constance import config
 from django.core.management import call_command
 from django.test import TestCase
 
-from opds_catalog import zipf as zipfile
 
 class constanceTestCase(TestCase):
     test_module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,16 +18,16 @@ class constanceTestCase(TestCase):
         out = StringIO()
         call_command('constance', 'list', stdout=out)
         out.seek(0)
-        self.assertEquals(out.getvalue().count('\n'), 29)
+        self.assertEqual(out.getvalue().count('\n'), 29)
         out.close()
 
     def test_constance_set_get_attr(self):
         conf_value = 'test_root_lib'
         call_command('constance', 'set', 'SOPDS_ROOT_LIB', conf_value)
-        self.assertEquals(config.SOPDS_ROOT_LIB, conf_value)
+        self.assertEqual(config.SOPDS_ROOT_LIB, conf_value)
         out = StringIO()
         call_command('constance', 'get', 'SOPDS_ROOT_LIB', stdout=out)
         out.seek(0)
-        self.assertEquals(out.getvalue().strip(), conf_value)
+        self.assertEqual(out.getvalue().strip(), conf_value)
         out.close()
 

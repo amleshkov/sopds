@@ -4,7 +4,7 @@ import os
 import re
 
 from django.db.models import Q
-from django.utils.translation import ugettext as _ , ugettext_noop as _noop
+from django.utils.translation import gettext as _, gettext_noop as _noop
 from django.db import transaction, connection
 
 from opds_catalog.models import Book, Catalog, Author, Genre, Series, bseries, bauthor, bgenre, bookshelf, Counter, LangCodes
@@ -266,9 +266,3 @@ def addseries(ser):
 def addbseries(book, ser, ser_no):
     bs = bseries(book=book, ser=ser, ser_no=ser_no)
     bs.save()
-    
-def set_autocommit(autocommit):
-    transaction.set_autocommit(autocommit)
-    
-def commit():
-    transaction.commit()

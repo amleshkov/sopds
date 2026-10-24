@@ -4,6 +4,7 @@ import os
 import codecs
 import base64
 import io
+from functools import wraps
 
 from django.http import HttpResponse, Http404
 from django.views.decorators.cache import cache_page
@@ -18,6 +19,14 @@ from book_tools.format.mimetype import Mimetype
 
 from constance import config
 from PIL import Image
+
+
+def cover_cache(view):
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        return cache_page(config.SOPDS_CACHE_TIME)(view)(request, *args, **kwargs)
+    return wrapper
+
 
 def getFileName(book):
     if config.SOPDS_TITLE_AS_FILENAME:
@@ -106,7 +115,7 @@ def Download(request, book_id, zip_flag):
 
 # Новая версия (0.42) процедуры извлечения обложек из файлов книг fb2, epub, mobi
 @sopds_auth_required
-@cache_page(config.SOPDS_CACHE_TIME)
+@cover_cache
 def Cover(request, book_id, thumbnail=False):
     """ Загрузка обложки """
     book = Book.objects.get(id=book_id)

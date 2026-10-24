@@ -57,7 +57,7 @@
 			<b>{{ b.title }}</b>
 			<i style="font-size:80%;">{% trans "Download:" %} </i>
 			<i><a href="{% url 'opds_catalog:download' b.id 0 %}"><span class="label small">{{b.format}}</span></a></i>&nbsp;
-            {% if not b.format in nozip %}
+            {% if b.format not in nozip %}
                 <i><a href="{% url 'opds_catalog:download' b.id 1 %}"><span class="label small">{{b.format}}+zip</span></a></i>&nbsp;
             {%  endif %}
 			{% if isbookshelf %}
