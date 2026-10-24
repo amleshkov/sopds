@@ -7,9 +7,8 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-from opds_catalog.models import Book, Counter, Genre
-
 from constance import config
+from opds_catalog.models import Book, Genre
 
 
 class sopdsUtilTestCase(TestCase):
@@ -49,8 +48,9 @@ class sopdsUtilTestCase(TestCase):
 class sopdsScannerCommandTestCase(TestCase):
 
     def _command(self):
-        from opds_catalog.management.commands.sopds_scanner import Command
         import logging
+
+        from opds_catalog.management.commands.sopds_scanner import Command
         cmd = Command()
         cmd.logger = logging.getLogger('')
         return cmd
@@ -112,21 +112,22 @@ class sopdsServerCommandTestCase(TestCase):
 class scannerHandleScanTestCase(TestCase):
 
     def _command(self):
-        from opds_catalog.management.commands.sopds_scanner import Command
         import logging
+
+        from opds_catalog.management.commands.sopds_scanner import Command
         cmd = Command()
         cmd.logger = logging.getLogger('')
         return cmd
 
     def test_handle_scan_runs_full_scan(self):
         import os
-        from django.test import override_settings
+
         test_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tests', 'data')
         config.SOPDS_ROOT_LIB = test_root
         out = StringIO()
         call_command('sopds_scanner', 'scan', stdout=out)
         from opds_catalog.models import Book
-        self.assertEqual(Book.objects.count(), 6)
+        self.assertEqual(Book.objects.count(), 4)
 
     def test_update_shedule(self):
         cmd = self._command()

@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 
 loglevels={'debug':logging.DEBUG,'info':logging.INFO,'warning':logging.WARNING,'error':logging.ERROR,'critical':logging.CRITICAL,'none':logging.NOTSET}
-NOZIP_FORMATS = ['epub', 'mobi']
+NOZIP_FORMATS = []
 
 VERSION = "0.47-devel"
 TITLE = getattr(settings, "SOPDS_TITLE", "SimpleOPDS")

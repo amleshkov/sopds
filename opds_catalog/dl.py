@@ -156,7 +156,7 @@ def Cover(request, book_id, thumbnail=False):
     try:
         with stream:
             book_data = create_bookfile(stream, book.filename)
-            image = book_data.extract_cover_memory()
+            image = book_data.extract_cover_memory() if book_data else None
     except Exception as err:
         logger.debug('Cover extraction failed for book %s: %s', book_id, err)
         image = None

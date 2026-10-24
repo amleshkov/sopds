@@ -14,15 +14,12 @@ import opds_catalog.zipf as zipfile
 from book_tools.format import create_bookfile
 from book_tools.format.util import strip_symbols
 from constance import config
-from opds_catalog import fb2parse, inpx_parser, opdsdb
+from opds_catalog import inpx_parser, opdsdb
 
 BATCH_SIZE = 100
 
 class opdsScanner:
     def __init__(self, logger=None):
-        self.fb2parser=None
-        self.init_parser()
-
         if logger:
             self.logger = logger
         else:
@@ -42,9 +39,6 @@ class opdsScanner:
         self.bad_archives = 0
         self.bad_books = 0
         self.books_in_archives = 0
-
-    def init_parser(self):
-        self.fb2parser=fb2parse.fb2parser(False)
 
     def log_options(self):
         self.logger.info(' ***** Starting sopds-scan...')

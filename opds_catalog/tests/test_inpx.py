@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 import io
 import os
-import shutil
 import tempfile
 import zipfile
 
 from django.test import TestCase
 
-from opds_catalog.models import Author, Book, Catalog, Genre, Series
-from opds_catalog.sopdscan import opdsScanner
-
 from constance import config
+from opds_catalog.models import Book, Catalog
+from opds_catalog.sopdscan import opdsScanner
 
 SEPARATOR = b'\x04'
 
