@@ -8,6 +8,8 @@ from django.contrib.auth.models import User
 
 from constance import config
 
+from opds_catalog.models import Book
+
 
 class DownloadsAuthTestCase(TestCase):
     fixtures = ['testdb.json']
@@ -39,7 +41,7 @@ class DownloadsAuthTestCase(TestCase):
         config.SOPDS_AUTH = True
         response = Client().get(self.download_url, HTTP_AUTHORIZATION=self._basic())
         self.assertEqual(response.status_code, 200)
-        self.assertGreater(len(response.content), 0)
+        self.assertGreater(len(b''.join(response.streaming_content)), 0)
 
     def test_download_ok_with_session_auth(self):
         config.SOPDS_AUTH = True
@@ -88,3 +90,40 @@ class DownloadsErrorHandlingTestCase(TestCase):
     def test_cover_unknown_book_404(self):
         response = Client().get(reverse('opds:cover', kwargs={'book_id': 999999}))
         self.assertEqual(response.status_code, 404)
+
+
+class DownloadsStreamingTestCase(TestCase):
+    fixtures = ['testdb.json']
+
+    def setUp(self):
+        self.test_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        config.SOPDS_ROOT_LIB = self.test_root
+        config.SOPDS_AUTH = False
+
+    def test_loose_book_streams_identical_bytes(self):
+        import io as io_mod
+        book = Book.objects.get(filename='262001.fb2')
+        response = Client().get(reverse('opds:download', kwargs={'book_id': book.id, 'zip_flag': 0}))
+        self.assertEqual(response.status_code, 200)
+        with open(os.path.join(self.test_root, '262001.fb2'), 'rb') as f:
+            self.assertEqual(b''.join(response.streaming_content), f.read())
+        self.assertEqual(response['Content-Length'], str(book.filesize))
+
+    def test_zip_book_streams_identical_bytes(self):
+        book = Book.objects.get(filename='539603.fb2')
+        response = Client().get(reverse('opds:download', kwargs={'book_id': book.id, 'zip_flag': 0}))
+        self.assertEqual(response.status_code, 200)
+        import opds_catalog.zipf as zipf
+        with zipf.ZipFile(os.path.join(self.test_root, 'books.zip'), 'r') as z:
+            self.assertEqual(b''.join(response.streaming_content), z.read('539603.fb2'))
+
+    def test_zip_flag_wraps_book_into_zip(self):
+        import io as io_mod
+        import opds_catalog.zipf as zipf
+        book = Book.objects.get(filename='262001.fb2')
+        response = Client().get(reverse('opds:download', kwargs={'book_id': book.id, 'zip_flag': 1}))
+        self.assertEqual(response.status_code, 200)
+        with zipf.ZipFile(io_mod.BytesIO(response.content), 'r') as z:
+            self.assertEqual(len(z.namelist()), 1)
+            with open(os.path.join(self.test_root, '262001.fb2'), 'rb') as f:
+                self.assertEqual(z.read(z.namelist()[0]), f.read())

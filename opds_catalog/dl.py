@@ -2,11 +2,10 @@
 
 import logging
 import os
-import codecs
 import io
 from functools import wraps
 
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, FileResponse
 from django.views.decorators.cache import cache_page
 
 from opds_catalog.models import Book, bookshelf
@@ -39,6 +38,65 @@ def getFileName(book):
     return utils.to_ascii(transname)
 
 
+def book_full_path(book):
+    full_path = os.path.join(config.SOPDS_ROOT_LIB, book.path)
+    if book.cat_type == opdsdb.CAT_INP:
+        inp_path, zip_name = os.path.split(full_path)
+        inpx_path, inp_name = os.path.split(inp_path)
+        path, inpx_name = os.path.split(inpx_path)
+        full_path = os.path.join(path, zip_name)
+    return full_path
+
+
+class BookStream:
+    """File-like wrapper around the book bytes plus every resource that must be closed with it."""
+
+    def __init__(self, stream, resources):
+        self._stream = stream
+        self._resources = resources
+
+    def read(self, size=-1):
+        return self._stream.read(size)
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        self.close()
+
+    def close(self):
+        for resource in self._resources:
+            try:
+                resource.close()
+            except Exception as err:
+                logger.debug('Error closing book stream resource: %s', err)
+
+
+def open_book_stream(book):
+    """Open the raw bytes of a book file for streaming. Raises Http404 when unavailable."""
+    full_path = book_full_path(book)
+    try:
+        if book.cat_type == opdsdb.CAT_NORMAL:
+            fo = open(os.path.join(full_path, book.filename), 'rb')
+            return BookStream(fo, [fo])
+        if book.cat_type in (opdsdb.CAT_ZIP, opdsdb.CAT_INP):
+            fz = open(full_path, 'rb')
+            try:
+                z = zipfile.ZipFile(fz, 'r', allowZip64=True)
+                fo = z.open(book.filename)
+            except Exception:
+                fz.close()
+                raise
+            return BookStream(fo, [fo, z, fz])
+    except (OSError, KeyError, RuntimeError, zipfile.BadZipFile) as err:
+        logger.warning('Book file not available (book %s): %s', book.id, err)
+        raise Http404
+    raise Http404
+
+
 @sopds_auth_required
 def Download(request, book_id, zip_flag):
     """ Загрузка файла книги """
@@ -50,73 +108,42 @@ def Download(request, book_id, zip_flag):
     if config.SOPDS_AUTH and request.user.is_authenticated:
         bookshelf.objects.get_or_create(user=request.user, book=book)
 
-    full_path=os.path.join(config.SOPDS_ROOT_LIB,book.path)
-    
-    if book.cat_type==opdsdb.CAT_INP:
-        # Убираем из пути INPX и INP файл
-        inp_path, zip_name = os.path.split(full_path)
-        inpx_path, inp_name = os.path.split(inp_path)
-        path, inpx_name = os.path.split(inpx_path)
-        full_path = os.path.join(path,zip_name)
-        
-    if config.SOPDS_TITLE_AS_FILENAME:
-        transname=utils.translit(book.title+'.'+book.format)
-    else:
-        transname=utils.translit(book.filename)
-        
-    transname = utils.to_ascii(transname)
-        
+    transname = getFileName(book)
+
     if zip_flag == '1':
-        dlfilename=transname+'.zip'   
-        content_type= Mimetype.FB2_ZIP if book.format=='fb2' else Mimetype.ZIP
-    else:    
-        dlfilename=transname
+        dlfilename = transname + '.zip'
+        content_type = Mimetype.FB2_ZIP if book.format == 'fb2' else Mimetype.ZIP
+    else:
+        dlfilename = transname
         content_type = mime_detector.fmt(book.format)
 
-    response = HttpResponse()
-    response["Content-Type"]='%s; name="%s"'%(content_type,dlfilename)
-    response["Content-Disposition"] = 'attachment; filename="%s"'%(dlfilename)
-    response["Content-Transfer-Encoding"]='binary'
+    headers = {
+        "Content-Type": '%s; name="%s"' % (content_type, dlfilename),
+        "Content-Disposition": 'attachment; filename="%s"' % dlfilename,
+        "Content-Transfer-Encoding": 'binary',
+    }
 
-    z = None
-    fz = None
-    fo = None
-    s = None
-    book_size = book.filesize
-    try:
-        if book.cat_type==opdsdb.CAT_NORMAL:
-            file_path=os.path.join(full_path, book.filename)
-            book_size=os.path.getsize(file_path)
-            fo=codecs.open(file_path, "rb")
-            s=fo.read()
-        elif book.cat_type in [opdsdb.CAT_ZIP, opdsdb.CAT_INP]:
-            fz=codecs.open(full_path, "rb")
-            z = zipfile.ZipFile(fz, 'r', allowZip64=True)
-            book_size=z.getinfo(book.filename).file_size
-            fo= z.open(book.filename)
-            s=fo.read()
-    except (OSError, KeyError, zipfile.BadZipFile):
-        raise Http404
+    stream = open_book_stream(book)
 
-    if zip_flag=='1':
+    if zip_flag == '1':
         dio = io.BytesIO()
-        zo = zipfile.ZipFile(dio, 'w', zipfile.ZIP_DEFLATED)
-        zo.writestr(transname,s)
-        zo.close()
+        with zipfile.ZipFile(dio, 'w', zipfile.ZIP_DEFLATED) as zo:
+            zo.writestr(transname, stream.read())
+        stream.close()
         buf = dio.getvalue()
+        response = HttpResponse(content_type=headers["Content-Type"])
+        for name, value in headers.items():
+            response[name] = value
         response["Content-Length"] = str(len(buf))
-        response.write(buf)        
-    else:
-        response["Content-Length"] = str(book_size)
-        response.write(s)
+        response.write(buf)
+        return response
 
-    if fo: fo.close()
-    if z: z.close()
-    if fz: fz.close()
-
+    response = FileResponse(stream, content_type=headers["Content-Type"])
+    for name, value in headers.items():
+        response[name] = value
+    response["Content-Length"] = str(book.filesize)
     return response
 
-# Новая версия (0.42) процедуры извлечения обложек из файлов книг fb2, epub, mobi
 @sopds_auth_required
 @cover_cache
 def Cover(request, book_id, thumbnail=False):
@@ -126,35 +153,14 @@ def Cover(request, book_id, thumbnail=False):
     except Book.DoesNotExist:
         raise Http404
     response = HttpResponse()
-    full_path = os.path.join(config.SOPDS_ROOT_LIB, book.path)
-    if book.cat_type == opdsdb.CAT_INP:
-        # Убираем из пути INPX и INP файл
-        inp_path, zip_name = os.path.split(full_path)
-        inpx_path, inp_name = os.path.split(inp_path)
-        path, inpx_name = os.path.split(inpx_path)
-        full_path = os.path.join(path,zip_name)
 
+    stream = open_book_stream(book)
     try:
-        if book.cat_type == opdsdb.CAT_NORMAL:
-            file_path = os.path.join(full_path, book.filename)
-            fo = codecs.open(file_path, "rb")
-            book_data = create_bookfile(fo,book.filename)
+        with stream:
+            book_data = create_bookfile(stream, book.filename)
             image = book_data.extract_cover_memory()
-            #fb2.parse(fo, 0)
-            fo.close()
-        elif book.cat_type in [opdsdb.CAT_ZIP, opdsdb.CAT_INP]:
-            fz = codecs.open(full_path, "rb")
-            z = zipfile.ZipFile(fz, 'r', allowZip64=True)
-            fo = z.open(book.filename)
-            book_data = create_bookfile(fo, book.filename)
-            image = book_data.extract_cover_memory()
-            #fb2.parse(fo, 0)
-            fo.close()
-            z.close()
-            fz.close()
     except Exception as err:
         logger.debug('Cover extraction failed for book %s: %s', book_id, err)
-        book_data = None
         image = None
 
     if image:
