@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _, gettext_noop as _noop
 from django.db import transaction, connection
 
-from opds_catalog.models import Book, Catalog, Author, Genre, Series, bseries, bauthor, bgenre, bookshelf, Counter, LangCodes
+from opds_catalog.models import Book, Catalog, Author, Genre, Series, BookSeries, BookAuthor, BookGenre, bookshelf, Counter, LangCodes
 from opds_catalog.models import SIZE_BOOK_FILENAME, SIZE_BOOK_PATH, SIZE_BOOK_FORMAT, SIZE_BOOK_DOCDATE, SIZE_BOOK_LANG, SIZE_BOOK_TITLE, SIZE_BOOK_ANNOTATION
 from opds_catalog.models import SIZE_CAT_CATNAME, SIZE_CAT_PATH, SIZE_AUTHOR_NAME, SIZE_GENRE, SIZE_GENRE_SECTION, SIZE_GENRE_SUBSECTION, SIZE_SERIES
 
@@ -56,9 +56,9 @@ def pg_optimize(verbose=False):
 
 def clear_all(verbose=False):
     cursor = connection.cursor()
-    cursor.execute('delete from opds_catalog_bseries')
-    cursor.execute('delete from opds_catalog_bauthor')
-    cursor.execute('delete from opds_catalog_bgenre')
+    cursor.execute('delete from opds_catalog_bookseries')
+    cursor.execute('delete from opds_catalog_bookauthor')
+    cursor.execute('delete from opds_catalog_bookgenre')
     cursor.execute('delete from opds_catalog_bookshelf')
     cursor.execute('delete from opds_catalog_book')
     cursor.execute('delete from opds_catalog_catalog')
@@ -248,7 +248,7 @@ def addauthor(full_name):
     return author
 
 def addbauthor(book, author):
-    ba = bauthor(book=book, author=author)
+    ba = BookAuthor(book=book, author=author)
     ba.save()
 
 def addgenre(genre):
@@ -256,7 +256,7 @@ def addgenre(genre):
     return genre
 
 def addbgenre(book, genre):
-    bg = bgenre(book=book, genre=genre)
+    bg = BookGenre(book=book, genre=genre)
     bg.save()
 
 def addseries(ser):
@@ -264,5 +264,5 @@ def addseries(ser):
     return series
 
 def addbseries(book, ser, ser_no):
-    bs = bseries(book=book, ser=ser, ser_no=ser_no)
+    bs = BookSeries(book=book, ser=ser, ser_no=ser_no)
     bs.save()

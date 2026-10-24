@@ -1,5 +1,5 @@
 from django.test import TestCase
-from opds_catalog.models import Catalog, bseries
+from opds_catalog.models import Catalog, BookSeries
 
 from opds_catalog import opdsdb
 
@@ -70,4 +70,4 @@ class opdsdbTestCase(TestCase):
         self.assertEqual(book.series.count(), 1)
         ser = book.series.all()[0]
         self.assertEqual(ser.ser, "mywork")
-        self.assertEqual(bseries.objects.get(ser=ser).ser_no, 1)
+        self.assertEqual(BookSeries.objects.get(ser=ser).ser_no, 1)

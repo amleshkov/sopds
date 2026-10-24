@@ -47,13 +47,22 @@ class Book(models.Model):
     #favorite = models.IntegerField(null=False, default=0)
     lang = models.CharField(max_length=SIZE_BOOK_LANG)
     title = models.CharField(max_length=SIZE_BOOK_TITLE, db_index=True)
-    search_title = models.CharField(max_length=SIZE_BOOK_TITLE, default=None, db_index=True)
+    search_title = models.CharField(max_length=SIZE_BOOK_TITLE, default='', db_index=True)
     annotation = models.CharField(max_length=SIZE_BOOK_ANNOTATION)
     lang_code = models.IntegerField(null=False, default=9, db_index=True)
     avail = models.IntegerField(null=False, default=0, db_index=True)
-    authors = models.ManyToManyField('Author', through='bauthor')
-    genres = models.ManyToManyField('Genre', through='bgenre')
-    series = models.ManyToManyField('Series', through='bseries')  
+    authors = models.ManyToManyField('Author', through='BookAuthor')
+    genres = models.ManyToManyField('Genre', through='BookGenre')
+    series = models.ManyToManyField('Series', through='BookSeries')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['filename', 'path'], name='book_unique_filename_path'),
+        ]
+        indexes = [
+            models.Index(fields=['path', 'avail'], name='book_path_avail_idx'),
+            models.Index(fields=['catalog', 'avail'], name='book_catalog_avail_idx'),
+        ]
 
 class Catalog(models.Model):
     parent = models.ForeignKey('self', null=True, db_index=True, on_delete=models.CASCADE)
@@ -62,13 +71,18 @@ class Catalog(models.Model):
     cat_type = models.IntegerField(null=False, default=0)
     cat_size = models.BigIntegerField(null=True, default=0)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['path'], name='catalog_unique_path'),
+        ]
+
 class Author(models.Model):
-    full_name = models.CharField(max_length=SIZE_AUTHOR_NAME, default=None, db_index=True)
-    search_full_name = models.CharField(max_length=SIZE_AUTHOR_NAME, default=None, db_index=True)
+    full_name = models.CharField(max_length=SIZE_AUTHOR_NAME, default='', db_index=True)
+    search_full_name = models.CharField(max_length=SIZE_AUTHOR_NAME, default='', db_index=True)
     lang_code = models.IntegerField(null=False, default=9, db_index=True)
 
 
-class bauthor(models.Model):
+class BookAuthor(models.Model):
     book = models.ForeignKey('Book', db_index=True, on_delete=models.CASCADE)
     author = models.ForeignKey('Author', db_index=True, on_delete=models.CASCADE)
 #    class Meta:
@@ -81,16 +95,16 @@ class Genre(models.Model):
     section = models.CharField(max_length=SIZE_GENRE_SECTION, db_index=True)
     subsection = models.CharField(max_length=SIZE_GENRE_SUBSECTION, db_index=True)
 
-class bgenre(models.Model):
+class BookGenre(models.Model):
     book = models.ForeignKey('Book', db_index=True, on_delete=models.CASCADE)
     genre = models.ForeignKey('Genre', db_index=True, on_delete=models.CASCADE)
 
 class Series(models.Model):
     ser = models.CharField(max_length=SIZE_SERIES, db_index=True)
-    search_ser = models.CharField(max_length=SIZE_SERIES, default=None, db_index=True)
+    search_ser = models.CharField(max_length=SIZE_SERIES, default='', db_index=True)
     lang_code = models.IntegerField(null=False, default=9,db_index=True)
 
-class bseries(models.Model):
+class BookSeries(models.Model):
     book = models.ForeignKey('Book', db_index=True, on_delete=models.CASCADE)
     ser = models.ForeignKey('Series', db_index=True, on_delete=models.CASCADE)
     ser_no = models.IntegerField(null=False, default=0)

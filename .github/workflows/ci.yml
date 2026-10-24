@@ -42,6 +42,9 @@ jobs:
       - name: Run scanner once
         run: docker compose run --rm sopds-scanner scanner scan
 
+      - name: Run scanner again to verify idempotency
+        run: docker compose run --rm sopds-scanner scanner scan
+
       - name: Check scanner loaded books into database
         run: |
           COUNT=$(docker compose exec -T postgres psql -U sopds -d sopds -tAc "select count(*) from opds_catalog_book")
