@@ -38,8 +38,6 @@ def sopds_processor(request):
     args['sopds_version']=settings.VERSION
     args['alphabet'] = config.SOPDS_ALPHABET_MENU
     args['splititems'] = config.SOPDS_SPLITITEMS
-    args['fb2tomobi'] = (config.SOPDS_FB2TOMOBI!="")
-    args['fb2toepub'] = (config.SOPDS_FB2TOEPUB!="")
     args['nozip'] = settings.NOZIP_FORMATS
     args['cache_t']=0
 

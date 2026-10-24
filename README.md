@@ -17,9 +17,6 @@ or from github.com with the following command:
 - Django 1.10
 - Pillow 2.9.0
 - apscheduler 3.3.0
-- django-picklefield
-- lxml
-- python-telegram-bot 10
 
 The following dependencies should be established for the project:
 
@@ -71,25 +68,6 @@ It should be taken into account that by default the project uses a simple sqlite
 is one-user. Therefore, until the scanning process is completed, the attempts to access the server may result in an error
 "A server error occurred." Please contact the administrator. "
 To eliminate this problem, you need to use multi-user databases, for example MYSQL.
-
-1.10 If necessary, configure and run Telegram-bot
-
-The process of creating bots in telegrams is very simple, to create your bot in Telegram, you need to connect to
-channel [@BotFather] (https://telegram.me/botfather) and give the command to create a new bot **/newbot**. Then enter the name of the bot
-(for example: **myopds**), and then the user name for this bot, which necessarily ends with "bot" (for example: **myopds_bot**).
-As a result, you will be given API_TOKEN, which you need to use in the following commands that will start your personal
-telegram-bot, which will allow you, using the Telegram instant messenger to get quick access to your personal library.
-
-    python3 manage.py sopds_util setconf SOPDS_TELEBOT_API_TOKEN "<Telegram API Token>"
-    python3 manage.py sopds_util setconf SOPDS_TELEBOT_AUTH False
-    python3 manage.py sopds_telebot start --daemon
-    
-Team,
-
-    python3 manage.py sopds_util setconf SOPDS_TELEBOT_AUTH True
-    
-you can limit the use of your bot by Telegram users. In this case, your bot will serve only those
-users whose name in the telegram matches the existing user name in your Simple OPDS database.
 
 #### 2. Configuring the MySQL database (optional, but very desirable for increasing performance).
 2.1 To work with a large number of books, it is highly advisable not to use sqlite, but to configure MySQL databases to work. MySQL is much faster than sqlite. In addition, SQLite is a single-user database, i.e. during scanning access to a DB it will be impossible.
@@ -213,45 +191,7 @@ Next, you must first create a database "sopds" and a user with the necessary rig
 	 python3 manage.py sopds_server stop
 	 python3 manage.py sopds_scanner stop
 
-#### 4. Setting the conversion of fb2 to EPUB or MOBI (optionally, you can not configure it)
-
-4.1 fb2-to-epub converter http://code.google.com/p/fb2-to-epub-converter/
-- First you need to download the latest version of the fb2toepub converter from the link above (the current one is already in the project) unfortunately the converter is not perfect and not all books can be converted, but most still converted
-- Further, you need to copy the archive to the folder **./convert/fb2toepub** and unzip
-- Next, we compile the project with the make command, as a result, the executable file fb2toepub appears in the unix_dist folder
-- Use the web interface of the administrator or the following console commands to specify the path to this converter:
-
->     python3 manage.py sopds_util setconf SOPDS_FB2TOEPUB "convert/fb2toepub/unix_dist/fb2toepub"
-
-- As a result, the OPDS client will be provided with links to the FB2-book in the epub format
-
-4.2 fb2epub converter http://code.google.com/p/epub-tools/ (the converter is written in Java, so at least JDK 1.5 should be installed on your system)
-- also first download the latest version from the link above (the current one is already in the project)
-- copy the jar-file to the directory **./convert/fb2epub** (There is already a shell script to run the jar-file)
-- Set the path to the shell script fb2epub (or fb2epub.cmd for Windows) using the web administrator interface or the following console commands:
-
->     python3 manage.py sopds_util setconf SOPDS_FB2TOEPUB "convert/fb2epub/fb2epub"
-
-4.3 Converter fb2conv (converting to epub and mobi)   
-    http://www.the-ebook.org/forum/viewtopic.php?t=28447  
-    https://github.com/rupor-github/fb2mobi/releases  
-- It is necessary to install python 2.7 (however, for the latest version with GitHub, you do not need to do this, since it uses the same as SOPDS python3)
-  and the packages lxml, cssutils:
-
-         yum install python
-         yum install python-lxml
-         yum install python-cssutils
-
-- download the latest version of the converter from the link above (the current one is already in the fb2conv directory of the project)
-- download the KindleGen utility from the Amazon website http://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000234621 (the current version of the utility is already in the fb2conv directory of the project)
-- copy the project archive to **./convert/fb2conv** (There are already shell scripts for starting the converter) and unzip it
-- To convert to MOBI you need to archive the KindleGen utility in the directory with the converter and unzip it
-- Use the web-based administrator interface or the following console commands to specify paths to the corresponding scripts:
-
->     python3 manage.py sopds_util setconf SOPDS_FB2TOEPUB "convert/fb2conv/fb2epub"
->     python3 manage.py sopds_util setconf SOPDS_FB2TOMOBI "convert/fb2conv/fb2mobi"
-
-#### 5. Console commands Simple OPDS
+#### 4. Console commands Simple OPDS
 
 Show information about the book collection:
 
@@ -347,13 +287,6 @@ However, please note that using data from INPX will result in the absence of ann
 **SOPDS_MAXITEMS** - The number of results to be displayed per page.  
 (the default is SOPDS_MAXITEMS = 60)  
 
-**SOPDS_FB2TOEPUB** and **SOPDS_FB2TOMOBI** set the paths to the programs - converters from FB2 to EPUB and MOBI.  
-(by default SOPDS_FB2TOEPUB = "")  
-(by default SOPDS_FB2TOMOBI = "")  
-
-**SOPDS_TEMP_DIR** specifies the path to the temporary directory, which is used to copy the original and the conversion result.  
-(by default SOPDS_TEMP_DIR = os.path.join (BASE_DIR, 'tmp'))  
-
 **SOPDS_TITLE_AS_FILENAME** - If True, when downloading instead of the original file name, the book will produce a transliteration of the title of the book.  
 (by default SOPDS_TITLE_AS_FILENAME = True)  
 
@@ -389,11 +322,3 @@ an extraordinary scan of the collection will be launched, and the specified flag
 **SOPDS_CACHE_TIME** - Pages cache time
 (default is SOPDS_CACHE_TIME = 1200)
 
-**SOPDS_TELEBOT_API_TOKEN** - API TOKEN for Telegram Bot
-
-**SOPDS_TELEBOT_AUTH** - If True, the Bot will grant access to the library, only to users whose name in the Telegram matches the name
-existing user in the Simple OPDS database.
-(by default SOPDS_TELEBOT_AUTH = True)
-
-**SOPDS_TELEBOT_MAXITEMS** - The maximum number of simultaneously displayed items in the Telegram message
-(by default SOPDS_TELEBOT_MAXITEMS = 10)

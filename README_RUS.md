@@ -19,7 +19,6 @@
 - apscheduler 3.3.0
 - django-picklefield
 - lxml
-- python-telegram-bot 10
 
 Для работы проекта необходимо установить указанные  зависимости: 
 
@@ -74,25 +73,6 @@
 ранее, попытки доступа к серверу могут завершаться ошибкой
 "A server error occurred.  Please contact the administrator."  
 Для устранения указанной проблемы необходимо ипользовать многопользовательские БД, Например MYSQL.
-
-1.10 При необходимости настраиваем и запускаем Telegram-бот    
-
-Процесс создания ботов в телеграм очень прост, для создания своего бота в мессенджере Telegram необходимо подключиться к
-каналу [@BotFather](https://telegram.me/botfather) и дать команду создания нового бота **/newbot**. После чего ввести имя бота 
-(например: **myopds**), а затем имя пользователя для этого бота, обязательно заканчивающегося на "bot" (например: **myopds_bot**).
-В результате, вам будет выдан API_TOKEN, который нужно использовать в следующих командах, которые запустят Вашего личного 
-телеграм-бота, который позволит Вам, используя мессенджер Telegram получать быстрый доступ к личной библиотеке.    
-
-    python3 manage.py sopds_util setconf SOPDS_TELEBOT_API_TOKEN  "<Telegram API Token>"
-    python3 manage.py sopds_util setconf SOPDS_TELEBOT_AUTH False
-    python3 manage.py sopds_telebot start --daemon
-    
-Командой,    
-
-    python3 manage.py sopds_util setconf SOPDS_TELEBOT_AUTH True
-    
-можно ограничить использование Вашего бота пользователями Telegram. В этом случае Ваш бот будет обслуживать запросы только таких 
-пользователей, чье имя в telegram совпадает с существующим имененм пользователей в вашей БД Simple OPDS.
 
 	
 #### 2. Настройка базы данных MySQL (опционально, но очень желательно для увеличения производительности).
@@ -226,47 +206,7 @@ MySQL по сравнению с sqlite работает гораздо быст
 	 python3 manage.py sopds_server stop
 	 python3 manage.py sopds_scanner stop
 	
-#### 4. Настройка конвертации fb2 в EPUB или MOBI (опционально, можно не настраивать)  
-
-4.1 Конвертер fb2-to-epub http://code.google.com/p/fb2-to-epub-converter/
-- во первых необходимо скачать последнюю версию конвертера fb2toepub по ссылке выше (текущая уже находится в проекте)
-  к сожалению конвертер не совершенный и не все книги может конвертировать, но большинство все-таки конвертируется 
-- далее, необходимо скопировать архив в папку **./convert/fb2toepub** и разархивировать 
-- далее, компилируем проект командой make, в результате в папке  unix_dist появится исполняемый файл fb2toepub 
-- При помощи веб-интерфейса администратора или указанных ниже команд консоли задать путь к этому конвертеру:  
-
->     python3 manage.py sopds_util setconf SOPDS_FB2TOEPUB "convert/fb2toepub/unix_dist/fb2toepub"
-
-- В результате OPDS-клиенту будут предоставлятся ссылки на FB2-книгу в формате epub  
-
-4.2 Конвертер fb2epub http://code.google.com/p/epub-tools/ (конвертер написан на Java, так что в вашей системе должнен быть установлен как минимум JDK 1.5)  
-- также сначала скачать последнюю версию по ссылке выше (текущая уже находится в проекте)  
-- скопировать jar-файл например в каталог **./convert/fb2epub** (Здесь уже лежит shell-скрипт для запуска jar-файла)  
-- При помощи веб-интерфейса администратора или указанных ниже команд консоли задать путь shell-скрипту fb2epub (или fb2epub.cmd для Windows) 
-
->     python3 manage.py sopds_util setconf SOPDS_FB2TOEPUB "convert/fb2epub/fb2epub"
-
-4.3 Конвертер fb2conv (конвертация в epub и mobi)  
-    http://www.the-ebook.org/forum/viewtopic.php?t=28447  
-    https://github.com/rupor-github/fb2mobi/releases  
-- Необходимо установить python 2.7 (однако для последней версии с GitHub этого делать уже не нужно, т.к. она использует как и SOPDS python3) 
-  и пакеты lxml, cssutils:   
-  
-         yum install python  
-         yum install python-lxml  
-         yum install python-cssutils  
-  
-- скачать последнюю версию конвертера по ссылке выше (текущая уже находится в каталоге fb2conv проекта)  
-- скачать утилиту KindleGen с сайта Amazon http://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000234621 
-  (текущая версия утилиты уже находится в каталоге fb2conv проекта)  
-- скопировать архив проекта в **./convert/fb2conv** (Здесь уже подготовлены shell-скрипты для запуска конвертера) и разархивировать его  
-- Для конвертации в MOBI нужно архив с утилитой KindleGen положить в каталог с конвертером и разархивировать  
-- При помощи веб-интерфейса администратора или указанных ниже команд консоли задать пути к соответствующим скриптам:  
-   
->     python3 manage.py sopds_util setconf SOPDS_FB2TOEPUB "convert/fb2conv/fb2epub"
->     python3 manage.py sopds_util setconf SOPDS_FB2TOMOBI "convert/fb2conv/fb2mobi"
-
-#### 5. Консольные команды Simple OPDS  
+#### 4. Консольные команды Simple OPDS  
 
 Показать информацию о коллекции книг:  
 
@@ -362,13 +302,6 @@ MySQL по сравнению с sqlite работает гораздо быст
 **SOPDS_MAXITEMS** - Количество выдаваемых результатов на одну страницу.  
 (по умолчанию SOPDS_MAXITEMS = 60)  
 
-**SOPDS_FB2TOEPUB** и **SOPDS_FB2TOMOBI** задают пути к програмам - конвертерам из FB2 в EPUB и MOBI.
-(по умолчанию SOPDS_FB2TOEPUB = "")  
-(по умолчанию SOPDS_FB2TOMOBI = "")  
-
-**SOPDS_TEMP_DIR** задает путь к временному каталогу, который используется для копирования оригинала и результата конвертации.  
-(по умолчанию SOPDS_TEMP_DIR = os.path.join(BASE_DIR,'tmp'))  
-
 **SOPDS_TITLE_AS_FILENAME** - Если True, то при скачивании вместо оригинального имени файла книги выдает транслитерацию названия книги.  
 (по умолчанию SOPDS_TITLE_AS_FILENAME = True)  
 
@@ -403,11 +336,3 @@ MySQL по сравнению с sqlite работает гораздо быст
 
 **SOPDS_CACHE_TIME** - Время хранения страницы в кэше
 (по умолчанию SOPDS_CACHE_TIME = 1200)
-
-**SOPDS_TELEBOT_API_TOKEN** - API TOKEN для Telegram Бота
-**SOPDS_TELEBOT_AUTH** - Если True, то Бот будет предоставлять доступ к библиотеке, только пользователям, чье имя в Telegram совпадает с именем
-существующего пользователя в БД Simple OPDS.
-(по умолчанию SOPDS_TELEBOT_AUTH = True)
-
-**SOPDS_TELEBOT_MAXITEMS** - Максимальное число одновременно выводимых элеменов в сообщении Telegram
-(по умолчанию SOPDS_TELEBOT_MAXITEMS = 10)

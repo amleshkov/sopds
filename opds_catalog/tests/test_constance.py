@@ -19,15 +19,15 @@ class constanceTestCase(TestCase):
         out = StringIO()
         call_command('constance', 'list', stdout=out)
         out.seek(0)
-        self.assertEquals(out.getvalue().count('\n'), 37)
+        self.assertEquals(out.getvalue().count('\n'), 29)
         out.close()
 
     def test_constance_set_get_attr(self):
-        conf_value = 'test_temp_dir'
-        call_command('constance', 'set', 'SOPDS_TEMP_DIR', conf_value)
-        self.assertEquals(config.SOPDS_TEMP_DIR, conf_value)
+        conf_value = 'test_root_lib'
+        call_command('constance', 'set', 'SOPDS_ROOT_LIB', conf_value)
+        self.assertEquals(config.SOPDS_ROOT_LIB, conf_value)
         out = StringIO()
-        call_command('constance', 'get', 'SOPDS_TEMP_DIR', stdout=out)
+        call_command('constance', 'get', 'SOPDS_ROOT_LIB', stdout=out)
         out.seek(0)
         self.assertEquals(out.getvalue().strip(), conf_value)
         out.close()

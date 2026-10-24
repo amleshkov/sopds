@@ -50,9 +50,6 @@ class opdsScanner:
         self.logger.info(' ***** Starting sopds-scan...')
         self.logger.debug('OPTIONS SET')
         if config.SOPDS_ROOT_LIB!=None:       self.logger.debug('root_lib = %s'%config.SOPDS_ROOT_LIB)
-        if config.SOPDS_FB2TOEPUB!=None: self.logger.debug('fb2toepub = %s'%config.SOPDS_FB2TOEPUB)
-        if config.SOPDS_FB2TOMOBI!=None: self.logger.debug('fb2tomobi = %s'%config.SOPDS_FB2TOMOBI)
-        if config.SOPDS_TEMP_DIR!=None:       self.logger.debug('temp_dir = %s'%config.SOPDS_TEMP_DIR)
         if config.SOPDS_FB2SAX != None:       self.logger.info('FB2SAX = %s'%config.SOPDS_FB2SAX)
 
 
