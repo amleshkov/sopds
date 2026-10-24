@@ -1,0 +1,18 @@
+[Unit]
+Description=SOPDS: Simple OPDS Catalog Server (gunicorn)
+Requires=postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/sopds/sopds-env.sh
+User=sopds
+WorkingDirectory=/opt/sopds/sopds
+ExecStartPre=/opt/sopds/djenv/bin/python manage.py migrate --noinput
+ExecStartPre=/opt/sopds/djenv/bin/python manage.py collectstatic --noinput
+ExecStart=/opt/sopds/djenv/bin/python manage.py sopds_server start --host 0.0.0.0 --port 8001
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -56,8 +57,6 @@ MIDDLEWARE = [
     'opds_catalog.middleware.SOPDSLocaleMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    #'django.middleware.cache.CacheMiddleware',
-    #'opds_catalog.middleware.FetchFromCacheMiddleware',
 ]
 
 ROOT_URLCONF = 'sopds.urls'
@@ -167,7 +166,8 @@ CACHE_MIDDLEWARE_KEY_PREFIX = "sopds"
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 STATIC_URL = '/static/'
-STATIC_ROOT = 'static'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.environ.get('SOPDS_STATIC_ROOT', os.path.join(BASE_DIR, 'staticroot'))
 
 CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
 

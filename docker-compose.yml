@@ -18,7 +18,7 @@ services:
     command: ["server"]
     environment: &app_env
       SOPDS_SECRET_KEY: ${SOPDS_SECRET_KEY:-sopds-dev-compose-key}
-      SOPDS_DEBUG: "True"
+      SOPDS_DEBUG: "False"
       SOPDS_ALLOWED_HOSTS: "*"
       SOPDS_DB_HOST: postgres
       SOPDS_DB_NAME: sopds

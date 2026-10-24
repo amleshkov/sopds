@@ -395,3 +395,20 @@ MySQL по сравнению с sqlite работает гораздо быст
     djenv/bin/python manage.py sopds_scanner start
 
     curl http://localhost:8001/opds/
+
+#### 8. Запуск под systemd с gunicorn
+
+`sopds_server start` запускает приложение с gunicorn в foreground-режиме
+(число воркеров берется из переменной окружения `SOPDS_WEB_WORKERS`, по умолчанию 2).
+Статические файлы раздает WhiteNoise из каталога, собранного `collectstatic`
+(`SOPDS_STATIC_ROOT`, по умолчанию `<проект>/staticroot`).
+
+Готовые юнит-файлы находятся в каталоге `deploy/`
+(`sopds.service`, `sopds-scanner.service`). Они рассчитаны на layout эталонной
+установки: проект в `/opt/sopds/sopds`, виртуальное окружение в `/opt/sopds/djenv`,
+переменные окружения в `/opt/sopds/sopds-env.sh` (включая `SOPDS_SECRET_KEY`).
+Скорректируйте пути под вашу установку и выполните:
+
+    cp deploy/*.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now sopds.service sopds-scanner.service

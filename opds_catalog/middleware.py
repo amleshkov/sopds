@@ -5,7 +5,6 @@ from functools import wraps
 from django.http import HttpResponse
 from django.contrib import auth
 from django.utils import translation
-from django.middleware.cache import FetchFromCacheMiddleware as DjangoFetchFromCacheMiddleware
 from django.utils.deprecation import MiddlewareMixin
 
 from constance import config
@@ -64,11 +63,3 @@ class SOPDSLocaleMiddleware(MiddlewareMixin):
             request.LANG = config.SOPDS_LANGUAGE
             translation.activate(request.LANG)
             request.LANGUAGE_CODE = request.LANG
-
-class FetchFromCacheMiddleware(DjangoFetchFromCacheMiddleware):
-
-    def process_request(self, request):
-        if not request.user.is_authenticated:
-            return None
-        else:
-            return super(FetchFromCacheMiddleware, self).process_request(request)

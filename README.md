@@ -383,3 +383,20 @@ All settings changed through the admin interface are carried over automatically.
     djenv/bin/python manage.py sopds_scanner start
 
     curl http://localhost:8001/opds/
+
+#### 8. Running under systemd with gunicorn
+
+`sopds_server start` runs the application with gunicorn in the foreground
+(worker count is taken from the `SOPDS_WEB_WORKERS` environment variable, default 2).
+Static files are served by WhiteNoise from the `collectstatic` output directory
+(`SOPDS_STATIC_ROOT`, default `<project>/staticroot`).
+
+Ready-to-use unit files are located in the `deploy/` directory
+(`sopds.service`, `sopds-scanner.service`). They expect the layout of the reference
+installation: project in `/opt/sopds/sopds`, virtualenv in `/opt/sopds/djenv`,
+environment variables in `/opt/sopds/sopds-env.sh` (including `SOPDS_SECRET_KEY`).
+Adjust the paths for your installation and then:
+
+    cp deploy/*.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now sopds.service sopds-scanner.service

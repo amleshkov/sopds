@@ -1,4 +1,4 @@
-# Pinned 2026-10-24, resolved on Python 3.12 for the Django 5.2 LTS upgrade.
+# Pinned 2026-10-24 (updated 2026-10-25), resolved on Python 3.12 for the Django 5.2 LTS stack.
 APScheduler==3.11.3
 asgiref==3.13.0
 Django==5.2.18
@@ -8,3 +8,5 @@ pillow==13.0.0
 psycopg2-binary==2.9.13
 sqlparse==0.6.0
 tzlocal==5.4.5
+gunicorn==26.2.0
+whitenoise==6.12.0

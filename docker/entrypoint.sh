@@ -63,6 +63,7 @@ if [ "$ROLE" = "server" ]; then
 
     python manage.py sopds_util setconf SOPDS_ROOT_LIB /data
     python manage.py sopds_util setconf SOPDS_AUTH False
+    python manage.py collectstatic --noinput
 
     exec python manage.py sopds_server start --host 0.0.0.0 --port "${SOPDS_PORT:-8001}"
 fi

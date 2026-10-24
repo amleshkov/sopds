@@ -1,0 +1,16 @@
+[Unit]
+Description=SOPDS: Simple OPDS Catalog Scanner service
+Requires=postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/sopds/sopds-env.sh
+User=sopds
+WorkingDirectory=/opt/sopds/sopds
+ExecStart=/opt/sopds/djenv/bin/python manage.py sopds_scanner start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
