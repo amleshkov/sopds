@@ -13,12 +13,9 @@ or from github.com with the following command:
 	git clone https://github.com/mitshel/sopds.git
 
 1.2 Dependencies.
-- Requires Python at least version 3.4
-- Django 1.10
-- Pillow 2.9.0
-- apscheduler 3.3.0
+- Reference environment: Python 3.9 (exact component versions are pinned in requirements.txt)
 
-The following dependencies should be established for the project:
+All dependencies are installed with:
 
     yum install python3                            # setup command for RHEL, Fedora, CentOS
     python3 -m pip install -r requirements.txt

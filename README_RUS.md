@@ -13,14 +13,9 @@
 	git clone https://github.com/mitshel/sopds.git
 
 1.2 Зависимости.  
-- Требуется Python не ниже версии 3.4
-- Django 1.10
-- Pillow 2.9.0
-- apscheduler 3.3.0
-- django-picklefield
-- lxml
+- Референсное окружение: Python 3.9 (точные версии компонентов зафиксированы в requirements.txt)
 
-Для работы проекта необходимо установить указанные  зависимости: 
+Все зависимости устанавливаются командой: 
 
 	yum install python3                            # команда установки для RHEL, Fedora, CentOS
 	python3 -m pip install -r requirements.txt

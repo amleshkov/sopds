@@ -1,6 +1,10 @@
-Django>=1.10,<2.2; python_version >= '3.4'
-Pillow>=2.9.0
-apscheduler>=3.3.0
-#django-constance[database]>=2.1
-django-picklefield
-lxml
+# Pinned 2026-10-24 from the known-working environment on stand 192.168.0.3
+# (Python 3.9.25, /opt/sopds/djenv). django-constance is vendored in ./constance.
+Django==2.1.15
+django-picklefield==3.0
+lxml==5.3.1
+pillow==11.1.0
+psycopg2-binary==2.8.6
+APScheduler==3.11.0
+pytz==2025.1
+tzlocal==5.3
