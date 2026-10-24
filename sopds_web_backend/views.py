@@ -10,7 +10,7 @@ from django.views.decorators.vary import vary_on_headers
 from django.urls import reverse, reverse_lazy
 from django.utils.html import strip_tags
 from django.db.models import Q
-from django.http import HttpResponseForbidden, HttpResponseBadRequest
+from django.http import HttpResponseForbidden, HttpResponseBadRequest, Http404
 from django.views.decorators.http import require_POST
 
 try:
@@ -26,6 +26,13 @@ from opds_catalog.opds_paginator import Paginator as OPDS_Paginator
 
 
 from sopds_web_backend.settings import HALF_PAGES_LINKS
+
+
+def to_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 def sopds_login(function=None, redirect_field_name=REDIRECT_FIELD_NAME, url=None):
     actual_decorator = user_passes_test(
@@ -88,7 +95,7 @@ def SearchBooksView(request):
         searchtype = request.GET.get('searchtype', 'm')
         searchterms = request.GET.get('searchterms', '')
         #searchterms0 = int(request.POST.get('searchterms0', ''))
-        page_num = int(request.GET.get('page', '1'))
+        page_num = to_int(request.GET.get('page', '1'), 1)
         page_num = page_num if page_num>0 else 1
         
         #if (len(searchterms)<3) and (searchtype in ('m', 'b', 'e')):
@@ -113,7 +120,7 @@ def SearchBooksView(request):
                 author = Author.objects.get(id=author_id)
                 #aname = "%s %s"%(author.last_name,author.first_name)
                 aname = author.full_name
-            except:
+            except (ValueError, Author.DoesNotExist):
                 author_id = 0
                 aname = ""                  
             books = Book.objects.filter(authors=author_id).order_by('search_title','-docdate')  
@@ -125,7 +132,7 @@ def SearchBooksView(request):
             try:
                 ser_id = int(searchterms)
                 ser = Series.objects.get(id=ser_id).ser
-            except:
+            except (ValueError, Series.DoesNotExist):
                 ser_id = 0
                 ser = ""
             #books = Book.objects.filter(series=ser_id).order_by('search_title','-docdate')
@@ -140,7 +147,7 @@ def SearchBooksView(request):
                 section = Genre.objects.get(id=genre_id).section
                 subsection = Genre.objects.get(id=genre_id).subsection
                 args['breadcrumbs'] = [_('Books'),_('Search by genre'),section,subsection]
-            except:
+            except (ValueError, Genre.DoesNotExist):
                 genre_id = 0
                 args['breadcrumbs'] = [_('Books'),_('Search by genre')]
                 
@@ -161,9 +168,11 @@ def SearchBooksView(request):
                 
         # Поиск дубликатов для книги            
         elif searchtype == 'd':
-            #try:
-            book_id = int(searchterms)
-            mbook = Book.objects.get(id=book_id)
+            try:
+                book_id = int(searchterms)
+                mbook = Book.objects.get(id=book_id)
+            except (ValueError, Book.DoesNotExist):
+                raise Http404
             books = Book.objects.filter(title=mbook.title, authors__in=mbook.authors.all()).exclude(id=book_id).distinct().order_by('-docdate')
             args['breadcrumbs'] = [_('Books'),_('Doubles for book'),mbook.title]
             args['searchobject'] = 'title'
@@ -172,12 +181,11 @@ def SearchBooksView(request):
         elif searchtype == 'i':
             try:
                 book_id = int(searchterms)
-                #mbook = Book.objects.get(id=book_id)
-            except:
-                book_id = 0
-                #mbook = None
-            books = Book.objects.filter(id=book_id) 
-            args['breadcrumbs'] = [_('Books'),books[0].title]
+                mbook = Book.objects.get(id=book_id)
+            except (ValueError, Book.DoesNotExist):
+                raise Http404
+            books = Book.objects.filter(id=book_id)
+            args['breadcrumbs'] = [_('Books'),mbook.title]
             #books = Book.objects.filter(title=mbook.title, authors__in=mbook.authors.all()).distinct().order_by('-docdate')                
             #args['breadcrumbs'] = [_('Books'),mbook.title]
             args['searchobject'] = 'title'
@@ -268,7 +276,7 @@ def SearchSeriesView(request):
         searchtype = request.GET.get('searchtype', 'm')
         searchterms = request.GET.get('searchterms', '')
         #searchterms0 = int(request.POST.get('searchterms0', ''))
-        page_num = int(request.GET.get('page', '1'))
+        page_num = to_int(request.GET.get('page', '1'), 1)
         page_num = page_num if page_num>0 else 1
         
         if searchtype == 'm':
@@ -314,7 +322,7 @@ def SearchAuthorsView(request):
         searchtype = request.GET.get('searchtype', 'm')
         searchterms = request.GET.get('searchterms', '')
         #searchterms0 = int(request.POST.get('searchterms0', ''))
-        page_num = int(request.GET.get('page', '1'))
+        page_num = to_int(request.GET.get('page', '1'), 1)
         page_num = page_num if page_num>0 else 1
         
         if searchtype == 'm':
@@ -354,17 +362,18 @@ def CatalogsView(request):
 
     if request.GET:
         cat_id = request.GET.get('cat', None)
-        page_num = int(request.GET.get('page', '1'))   
+        page_num = to_int(request.GET.get('page', '1'), 1)   
     else:
         cat_id = None
         page_num = 1
 
+    cat_id = to_int(cat_id, None) if cat_id is not None else None
     try:
         if cat_id is not None:
             cat = Catalog.objects.get(id=cat_id)
         else:
             cat = Catalog.objects.get(parent__id=cat_id)
-    except Catalog.DoesNotExist:
+    except (Catalog.DoesNotExist, ValueError):
         cat = None
     
     catalogs_list = Catalog.objects.filter(parent=cat).order_by("cat_name")
@@ -424,7 +433,7 @@ def BooksView(request):
     args = {}
 
     if request.GET:
-        lang_code = int(request.GET.get('lang', '0'))  
+        lang_code = to_int(request.GET.get('lang', '0'), 0)  
         chars = request.GET.get('chars', '')
     else:
         lang_code = 0
@@ -461,7 +470,7 @@ def AuthorsView(request):
     args = {}
 
     if request.GET:
-        lang_code = int(request.GET.get('lang', '0'))  
+        lang_code = to_int(request.GET.get('lang', '0'), 0)  
         chars = request.GET.get('chars', '')
     else:
         lang_code = 0
@@ -498,7 +507,7 @@ def SeriesView(request):
     args = {}
 
     if request.GET:
-        lang_code = int(request.GET.get('lang', '0'))  
+        lang_code = to_int(request.GET.get('lang', '0'), 0)  
         chars = request.GET.get('chars', '')
     else:
         lang_code = 0
@@ -535,7 +544,7 @@ def GenresView(request):
     args = {}
 
     if request.GET:
-        section_id = int(request.GET.get('section', '0'))  
+        section_id = to_int(request.GET.get('section', '0'), 0)  
     else:
         section_id = 0
         
@@ -543,7 +552,10 @@ def GenresView(request):
         items = Genre.objects.values('section').annotate(section_id=Min('id'), num_book=Count('book')).filter(num_book__gt=0).order_by('section')
         args['breadcrumbs'] =  [_('Genres'),_('Select')]
     else:
-        section = Genre.objects.get(id=section_id).section
+        try:
+            section = Genre.objects.get(id=section_id).section
+        except Genre.DoesNotExist:
+            raise Http404
         items = Genre.objects.filter(section=section).annotate(num_book=Count('book')).filter(num_book__gt=0).values().order_by('subsection')   
         args['breadcrumbs'] =  [_('Genres'),_('Select'),section]   
           

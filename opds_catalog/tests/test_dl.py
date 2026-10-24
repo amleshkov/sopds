@@ -59,3 +59,32 @@ class DownloadsAuthTestCase(TestCase):
         config.SOPDS_AUTH = False
         response = Client().get(self.download_url)
         self.assertEqual(response.status_code, 200)
+
+
+class DownloadsErrorHandlingTestCase(TestCase):
+    fixtures = ['testdb.json']
+
+    def setUp(self):
+        self.test_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        config.SOPDS_ROOT_LIB = self.test_root
+        config.SOPDS_AUTH = False
+        from opds_catalog.models import Catalog, Book
+        ghost_catalog = Catalog.objects.get(path='.')
+        Book.objects.create(filename='ghost.fb2', path='nonexistent_dir', filesize=10,
+                            format='fb2', catalog=ghost_catalog, docdate='', lang='ru',
+                            title='Ghost', search_title='GHOST', annotation='', avail=2)
+
+    def test_download_unknown_book_404(self):
+        response = Client().get(reverse('opds:download', kwargs={'book_id': 999999, 'zip_flag': 0}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_download_vanished_file_404(self):
+        ghost = None
+        from opds_catalog.models import Book
+        ghost = Book.objects.get(filename='ghost.fb2')
+        response = Client().get(reverse('opds:download', kwargs={'book_id': ghost.id, 'zip_flag': 0}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_cover_unknown_book_404(self):
+        response = Client().get(reverse('opds:cover', kwargs={'book_id': 999999}))
+        self.assertEqual(response.status_code, 404)

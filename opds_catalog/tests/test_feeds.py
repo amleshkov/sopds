@@ -249,3 +249,26 @@ class unknownGenreTestCase(TestCase):
     def test_unknown_genre_returns_404(self):
         response = Client().get(reverse('opds:genres', kwargs={'section': 99999}))
         self.assertEqual(response.status_code, 404)
+
+
+class feedErrorHandlingTestCase(TestCase):
+    fixtures = ['testdb.json']
+
+    def setUp(self):
+        config.SOPDS_AUTH = False
+
+    def test_duplicates_feed_invalid_id_404(self):
+        response = Client().get(reverse('opds:searchbooks', kwargs={'searchtype': 'd', 'searchterms': 'abc'}))
+        self.assertEqual(response.status_code, 404)
+        response = Client().get(reverse('opds:searchbooks', kwargs={'searchtype': 'd', 'searchterms': '999999'}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_malformed_authorization_header_401_not_500(self):
+        import base64
+        config.SOPDS_AUTH = True
+        try:
+            for header in ('garbage', 'Basic %%%%', 'Basic ' + base64.b64encode(b'nocolon').decode()):
+                response = Client().get('/opds/', HTTP_AUTHORIZATION=header)
+                self.assertEqual(response.status_code, 401, header)
+        finally:
+            config.SOPDS_AUTH = False

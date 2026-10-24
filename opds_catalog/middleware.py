@@ -1,4 +1,5 @@
 import base64
+import binascii
 from functools import wraps
 
 from django.http import HttpResponse
@@ -26,7 +27,7 @@ class BasicAuthMiddleware(object):
 
     def unauthed(self):
         response = HttpResponse("""<html><title>Auth required</title><body>
-                                <h1>Authorization Required</h1></body></html>""", content_type="text/html")
+                            <h1>Authorization Required</h1></body></html>""", content_type="text/html")
         response['WWW-Authenticate'] = 'Basic realm="OPDS"'
         response.status_code = 401
         return response
@@ -34,25 +35,19 @@ class BasicAuthMiddleware(object):
     def process_request(self,request):
         if not config.SOPDS_AUTH:
             return
-            
-        # AuthenticationMiddleware is required so that request.user exists.
-        #if not hasattr(request, 'user'):
-        #    raise ImproperlyConfigured(
-        #        "The Django remote user auth middleware requires the"
-        #        " authentication middleware to be installed.  Edit your"
-        #        " MIDDLEWARE setting to insert"
-        #        " 'django.contrib.auth.middleware.AuthenticationMiddleware'"
-        #        " before the BasicAuthMiddleware class.")
+
         try:
             authentication = request.META[self.header]
         except KeyError:
-            return self.unauthed()  
-                    
-        (auth_meth, auth_data) = authentication.split(' ',1)
-        if 'basic' != auth_meth.lower():
             return self.unauthed()
-        auth_data = base64.b64decode(auth_data.strip()).decode('utf-8')
-        username, password = auth_data.split(':',1)            
+
+        try:
+            (auth_meth, auth_data) = authentication.split(' ', 1)
+            if 'basic' != auth_meth.lower():
+                return self.unauthed()
+            username, password = base64.b64decode(auth_data.strip()).decode('utf-8').split(':', 1)
+        except (ValueError, UnicodeDecodeError, binascii.Error):
+            return self.unauthed()
 
         user = auth.authenticate(username=username, password=password)
         if user and user.is_active:

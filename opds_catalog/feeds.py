@@ -416,14 +416,14 @@ class SearchBooksFeed(AuthFeed):
         elif searchtype == 'a':
             try:
                 author_id = int(searchterms)
-            except:
+            except ValueError:
                 author_id = 0
             books = Book.objects.filter(authors=author_id).order_by('search_title','-docdate')
         # Поиск книг по серии
         elif searchtype == 's':
             try:
                 ser_id = int(searchterms)
-            except:
+            except ValueError:
                 ser_id = 0
             #books = Book.objects.filter(series=ser_id).order_by('search_title','-docdate')
             books = Book.objects.filter(series=ser_id).order_by('bookseries__ser_no', 'search_title', '-docdate')
@@ -432,15 +432,15 @@ class SearchBooksFeed(AuthFeed):
             try:
                 ser_id = int(searchterms0)
                 author_id = int(searchterms)
-            except:
+            except (ValueError, TypeError):
                 ser_id = 0
-                author_id = 0 
+                author_id = 0
             books = Book.objects.filter(authors=author_id, series=ser_id if ser_id else None).order_by('bookseries__ser_no', 'search_title', '-docdate')
         # Поиск книг по жанру
         elif searchtype == 'g':
             try:
                 genre_id = int(searchterms)
-            except:
+            except ValueError:
                 genre_id = 0
             books = Book.objects.filter(genres=genre_id).order_by('search_title','-docdate')    
         # Поиск книг на книжной полке            
@@ -451,8 +451,11 @@ class SearchBooksFeed(AuthFeed):
                 books=Book.objects.filter(id=0)  
         # Поиск дубликатов для книги            
         elif searchtype == 'd':
-            book_id = int(searchterms)
-            mbook = Book.objects.get(id=book_id)
+            try:
+                book_id = int(searchterms)
+                mbook = Book.objects.get(id=book_id)
+            except (ValueError, Book.DoesNotExist):
+                raise Http404
             books = Book.objects.filter(title__iexact=mbook.title, authors__in=mbook.authors.all()).exclude(id=book_id).order_by('search_title','-docdate')
                     
         # prefetch_related on sqlite on items >999 therow error "too many SQL variables"
@@ -599,7 +602,7 @@ class SelectSeriesFeed(AuthFeed):
     def get_object(self, request, searchtype, searchterms):
         try:
             author_id=int(searchterms)
-        except:
+        except ValueError:
             author_id = 0
         return author_id
     
@@ -736,7 +739,7 @@ class SearchSeriesFeed(AuthFeed):
         elif searchtype == 'a':
             try:
                 self.author_id = int(searchterms)
-            except:
+            except ValueError:
                 self.author_id = None
             series = Series.objects.filter(book__authors=self.author_id)
             

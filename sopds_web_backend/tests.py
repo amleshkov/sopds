@@ -147,3 +147,36 @@ class queryCountTestCase(TestCase):
         shelf_queries = [q['sql'] for q in ctx.captured_queries if 'opds_catalog_bookshelf' in q['sql']]
         self.assertLessEqual(len(shelf_queries), 1, shelf_queries)
         config.SOPDS_AUTH = False
+
+
+class errorHandlingTestCase(TestCase):
+    fixtures = ['testdb.json']
+
+    def setUp(self):
+        config.SOPDS_AUTH = False
+
+    def test_invalid_int_params_do_not_crash_pages(self):
+        c = Client()
+        for url in (reverse('web:searchbooks') + '?searchtype=m&searchterms=x&page=abc',
+                    reverse('web:book') + '?lang=abc',
+                    reverse('web:author') + '?lang=abc&chars=A',
+                    reverse('web:series') + '?lang=1&page=xyz',
+                    reverse('web:catalog') + '?cat=abc&page=abc',
+                    reverse('web:genre') + '?section=abc'):
+            response = c.get(url)
+            self.assertEqual(response.status_code, 200, url)
+
+    def test_duplicates_view_missing_book_404(self):
+        c = Client()
+        response = c.get(reverse('web:searchbooks') + '?searchtype=d&searchterms=abc')
+        self.assertEqual(response.status_code, 404)
+        response = c.get(reverse('web:searchbooks') + '?searchtype=d&searchterms=999999')
+        self.assertEqual(response.status_code, 404)
+
+    def test_by_id_view_missing_book_404(self):
+        response = Client().get(reverse('web:searchbooks') + '?searchtype=i&searchterms=999999')
+        self.assertEqual(response.status_code, 404)
+
+    def test_genres_view_unknown_section_404(self):
+        response = Client().get(reverse('web:genre') + '?section=99999')
+        self.assertEqual(response.status_code, 404)
