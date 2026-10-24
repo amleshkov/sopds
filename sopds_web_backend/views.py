@@ -434,14 +434,14 @@ def BooksView(request):
     if lang_code:
         sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
                from opds_catalog_book
-               where lang_code=%s and search_title like %s
+               where avail<>0 and lang_code=%s and search_title like %s
                group by substring(search_title,1,%s)
                order by id"""
         items = Book.objects.raw(sql, [length, length, lang_code, chars + '%', length])
     else:
         sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
                from opds_catalog_book
-               where search_title like %s
+               where avail<>0 and search_title like %s
                group by substring(search_title,1,%s)
                order by id"""
         items = Book.objects.raw(sql, [length, length, chars + '%', length])

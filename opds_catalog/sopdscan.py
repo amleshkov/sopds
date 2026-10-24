@@ -5,6 +5,7 @@ import time
 import datetime
 import logging
 import re
+from functools import partial
 
 from book_tools.format import create_bookfile
 from book_tools.format.util import strip_symbols
@@ -17,6 +18,8 @@ from opds_catalog import inpx_parser
 import opds_catalog.zipf as zipfile
 
 from constance import config
+
+BATCH_SIZE = 100
 
 class opdsScanner:
     def __init__(self, logger=None):
@@ -78,39 +81,85 @@ class opdsScanner:
         self.log_options()
         self.inp_cat = None
         self.zip_file = None
-        self.rel_path = None     
-                    
+        self.rel_path = None
+        self._visited_realpaths = set()
+
         opdsdb.avail_check_prepare()
-            
-        for full_path, dirs, files in os.walk(config.SOPDS_ROOT_LIB, followlinks=True):
+
+        for full_path, dirs, files in os.walk(config.SOPDS_ROOT_LIB, followlinks=True, onerror=self._walk_error):
+            real = os.path.realpath(full_path)
+            if real in self._visited_realpaths:
+                self.logger.warning('Symlink loop detected, skipping %s' % full_path)
+                continue
+            self._visited_realpaths.add(real)
+
             # Если разрешена обработка inpx, то при нахождении inpx обрабатываем его и прекращаем обработку текущего каталога
             if config.SOPDS_INPX_ENABLE:
-                inpx_files = [inpx for inpx in files if re.match('.*(.inpx|.INPX)$', inpx)]
-                # Пропускаем обработку файлов в текущем каталоге, если найдены inpx
+                inpx_files = [inpx for inpx in files if re.match(r'.*\.(inpx|INPX)$', inpx)]
                 if inpx_files:
                     for inpx_file in inpx_files:
                         file = os.path.join(full_path, inpx_file)
-                        self.processinpx(inpx_file, full_path, file)                       
+                        self._run_batch([partial(self._safe_inpx, inpx_file, full_path, file)])
                     continue
-                
-            for name in files:
-                file=os.path.join(full_path,name)
-                (n,e)=os.path.splitext(name)
-                if (e.lower() == '.zip'):
-                    if config.SOPDS_ZIPSCAN:
-                        self.processzip(name,full_path,file)
-                else:
-                    file_size=os.path.getsize(file)
-                    self.processfile(name,full_path,file,None,0,file_size)                   
 
-        #if config.SOPDS_DELETE_LOGICAL:
-        #    self.books_deleted=opdsdb.books_del_logical()
-        #else:
-        #    self.books_deleted=opdsdb.books_del_phisical()
-            
-        self.books_deleted=opdsdb.books_del_phisical()
-        
+            loose_files = []
+            zip_files = []
+            for name in files:
+                (n, e) = os.path.splitext(name)
+                if e.lower() == '.zip':
+                    if config.SOPDS_ZIPSCAN:
+                        zip_files.append(name)
+                else:
+                    loose_files.append(name)
+
+            for i in range(0, len(loose_files), BATCH_SIZE):
+                batch = loose_files[i:i + BATCH_SIZE]
+                self._run_batch([partial(self._safe_loose, name, full_path) for name in batch])
+
+            for name in zip_files:
+                file = os.path.join(full_path, name)
+                self._run_batch([partial(self._safe_zip, name, full_path, file)])
+
+        if config.SOPDS_DELETE_LOGICAL:
+            self.books_deleted = opdsdb.books_del_logical()
+        else:
+            self.books_deleted = opdsdb.books_del_phisical()
+
         self.log_stats()
+
+    def _run_batch(self, jobs):
+        try:
+            with transaction.atomic():
+                for job in jobs:
+                    job()
+        except Exception:
+            self.logger.exception('Scan batch failed, rolled back %d items' % len(jobs))
+
+    def _walk_error(self, err):
+        self.logger.warning('Filesystem walk error: %s' % err)
+
+    def _safe_loose(self, name, full_path):
+        file = os.path.join(full_path, name)
+        try:
+            file_size = os.path.getsize(file)
+        except OSError as err:
+            self.logger.warning('Cannot stat file %s: %s' % (file, err))
+            self.bad_books += 1
+            return
+        self.processfile(name, full_path, file, None, 0, file_size)
+
+    def _safe_zip(self, name, full_path, file):
+        try:
+            self.processzip(name, full_path, file)
+        except Exception as err:
+            self.bad_archives += 1
+            self.logger.warning('Error processing ZIP archive %s: %s' % (file, err))
+
+    def _safe_inpx(self, name, full_path, file):
+        try:
+            self.processinpx(name, full_path, file)
+        except Exception as err:
+            self.logger.exception('Error processing INPX file %s: %s' % (file, err))
 
     def inpskip_callback(self, inpx, inp_file, inp_size):
 
@@ -174,8 +223,9 @@ class opdsScanner:
         if opdsdb.arc_skip(rel_file,zsize):
             self.arch_skipped+=1
             self.logger.debug('Skip ZIP archive '+rel_file+'. Already scanned.')
-        else:                   
+        else:
             zip_process_error = 0
+            z = None
             try:
                 z = zipfile.ZipFile(file, 'r', allowZip64=True)
                 filelist = z.namelist()
@@ -187,14 +237,16 @@ class opdsScanner:
                         bookfile = z.open(n)
                         self.processfile(n,file,bookfile,cat,opdsdb.CAT_ZIP,file_size)
                         bookfile.close()
-                    except zipfile.BadZipFile:
+                    except (zipfile.BadZipFile, OSError, RuntimeError, EOFError):
                         self.logger.warning('Error processing ZIP file = '+file+' book file = '+n)
                         zip_process_error = 1
-                z.close()
                 self.arch_scanned+=1
             except zipfile.BadZipFile:
                 self.logger.warning('Error while read ZIP archive. File '+file+' corrupt.')
                 zip_process_error = 1
+            finally:
+                if z:
+                    z.close()
             self.bad_archives+=zip_process_error
 
     def processfile(self,name,full_path,file,cat,archive=0,file_size=0):

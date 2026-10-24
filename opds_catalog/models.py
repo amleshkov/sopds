@@ -35,6 +35,11 @@ LangCodes = {1:'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЬЫЪЭЮ
              3:'0123456789'}
 lang_menu = {1:_lazy('Cyrillic'), 2:_lazy('Latin'), 3:_lazy('Digits'), 9:_lazy('Other symbols'), 0:_lazy('Show all')}
 
+class AvailableBookManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(avail__gt=0)
+
+
 class Book(models.Model):
     filename = models.CharField(max_length=SIZE_BOOK_FILENAME,db_index=True)
     path = models.CharField(max_length=SIZE_BOOK_PATH,db_index=True)
@@ -54,6 +59,9 @@ class Book(models.Model):
     authors = models.ManyToManyField('Author', through='BookAuthor')
     genres = models.ManyToManyField('Genre', through='BookGenre')
     series = models.ManyToManyField('Series', through='BookSeries')
+
+    objects = AvailableBookManager()
+    all_objects = models.Manager()
 
     class Meta:
         constraints = [

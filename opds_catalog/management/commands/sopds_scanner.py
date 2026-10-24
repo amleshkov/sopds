@@ -71,15 +71,16 @@ class Command(BaseCommand):
             return
         
         self.scan_is_active = True
-        
-        if connection.connection and not connection.is_usable():
-            del(connections._connections.default)
-                
-        scanner=opdsScanner(self.logger)
-        with transaction.atomic():
+
+        try:
+            if connection.connection and not connection.is_usable():
+                del(connections._connections.default)
+
+            scanner=opdsScanner(self.logger)
             scanner.scan_all()
-        Counter.objects.update_known_counters()  
-        self.scan_is_active = False
+            Counter.objects.update_known_counters()
+        finally:
+            self.scan_is_active = False
         
     def update_shedule(self):
         self.SCAN_SHED_DAY = config.SOPDS_SCAN_SHED_DAY

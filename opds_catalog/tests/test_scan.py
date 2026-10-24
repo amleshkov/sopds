@@ -168,3 +168,97 @@ class scanTestCase(TestCase):
         self.assertEqual(Genre.objects.all().count(), 5)
         self.assertEqual(Series.objects.all().count(), 1)
         self.assertEqual(Catalog.objects.all().count(), 2)
+
+
+import shutil
+import tempfile
+from io import StringIO
+
+from django.test import TestCase
+
+
+class scanResilienceTestCase(TestCase):
+    test_module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    test_ROOTLIB = os.path.join(test_module_path, 'tests/data')
+
+    def setUp(self):
+        config.SOPDS_ROOT_LIB = self.test_ROOTLIB
+
+    def _scan(self, scanner):
+        scanner.scan_all()
+
+    def test_logical_delete_hides_and_restores_book(self):
+        with tempfile.TemporaryDirectory() as lib:
+            shutil.copy(os.path.join(self.test_ROOTLIB, '262001.fb2'), lib)
+            shutil.copy(os.path.join(self.test_ROOTLIB, 'books.zip'), lib)
+            config.SOPDS_ROOT_LIB = lib
+            config.SOPDS_DELETE_LOGICAL = False
+
+            scanner = opdsScanner()
+            self._scan(scanner)
+            self.assertEqual(Book.objects.count(), 4)
+
+            os.remove(os.path.join(lib, '262001.fb2'))
+            config.SOPDS_DELETE_LOGICAL = True
+            scanner = opdsScanner()
+            self._scan(scanner)
+
+            self.assertEqual(Book.objects.count(), 3)
+            self.assertEqual(Book.all_objects.count(), 4)
+            ghost = Book.all_objects.get(filename='262001.fb2')
+            self.assertEqual(ghost.avail, 0)
+
+            shutil.copy(os.path.join(self.test_ROOTLIB, '262001.fb2'), lib)
+            scanner = opdsScanner()
+            self._scan(scanner)
+            self.assertEqual(Book.objects.count(), 4)
+            self.assertEqual(Book.objects.get(filename='262001.fb2').avail, 2)
+
+    def test_symlink_loop_does_not_hang_scan(self):
+        with tempfile.TemporaryDirectory() as lib:
+            shutil.copy(os.path.join(self.test_ROOTLIB, '262001.fb2'), lib)
+            os.symlink(lib, os.path.join(lib, 'loop'))
+            config.SOPDS_ROOT_LIB = lib
+
+            scanner = opdsScanner()
+            self._scan(scanner)
+            self.assertEqual(Book.objects.count(), 1)
+
+    def test_batch_failure_keeps_committed_batches(self):
+        from opds_catalog import sopdscan as sopdscan_module
+
+        with tempfile.TemporaryDirectory() as lib:
+            for name in ('a.fb2', 'b.fb2', 'c.fb2'):
+                shutil.copy(os.path.join(self.test_ROOTLIB, '262001.fb2'), os.path.join(lib, name))
+            config.SOPDS_ROOT_LIB = lib
+
+            scanner = opdsScanner()
+            original_processfile = scanner.processfile
+            def flaky(name, *args, **kwargs):
+                if name == 'b.fb2':
+                    raise RuntimeError('boom')
+                return original_processfile(name, *args, **kwargs)
+            scanner.processfile = flaky
+
+            old_batch = sopdscan_module.BATCH_SIZE
+            sopdscan_module.BATCH_SIZE = 1
+            try:
+                self._scan(scanner)
+            finally:
+                sopdscan_module.BATCH_SIZE = old_batch
+
+            self.assertEqual(Book.objects.count(), 2)
+            self.assertFalse(Book.objects.filter(filename='b.fb2').exists())
+
+    def test_scan_is_active_reset_after_failure(self):
+        from unittest import mock
+        from opds_catalog.management.commands.sopds_scanner import Command
+
+        import logging
+        cmd = Command()
+        cmd.logger = logging.getLogger('')
+        with mock.patch('opds_catalog.management.commands.sopds_scanner.opdsScanner') as mocked:
+            mocked.return_value.scan_all.side_effect = RuntimeError('boom')
+            with self.assertRaises(RuntimeError):
+                cmd.scan()
+        self.assertFalse(cmd.scan_is_active)

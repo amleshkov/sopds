@@ -871,14 +871,14 @@ class BooksFeed(AuthFeed):
         if self.lang_code:
             sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
                    from opds_catalog_book
-                   where lang_code=%s and search_title like %s
+                   where avail<>0 and lang_code=%s and search_title like %s
                    group by substring(search_title,1,%s)
                    order by id"""
             dataset = Book.objects.raw(sql, [length, length, self.lang_code, chars + '%', length])
         else:
             sql = """select %s as l, substring(search_title,1,%s) as id, count(*) as cnt
                    from opds_catalog_book
-                   where search_title like %s
+                   where avail<>0 and search_title like %s
                    group by substring(search_title,1,%s)
                    order by id"""
             dataset = Book.objects.raw(sql, [length, length, chars + '%', length])

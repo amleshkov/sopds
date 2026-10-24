@@ -96,14 +96,14 @@ def getlangcode(s):
     return langcode
     
 def avail_check_prepare():
-    Book.objects.filter(~Q(avail=0)).update(avail=1)
+    Book.all_objects.filter(~Q(avail=0)).update(avail=1)
 
 def books_del_logical():
-    row_count = Book.objects.filter(avail=1).update(avail=0)
+    row_count = Book.all_objects.filter(avail=1).update(avail=0)
     return row_count
 
 def books_del_phisical():
-    row_count = Book.objects.filter(avail__lte=1).delete()
+    row_count = Book.all_objects.filter(avail__lte=1).delete()
     # TODO: Разобратся нужно ли удалять записи в таблицах связи ManyToMany или они сами удалятся?
     # sql='delete from '+TBL_BAUTHORS+' where book_id in (select book_id from '+TBL_BOOKS+' where avail<=1)'
     # sql='delete from '+TBL_BGENRES+' where book_id in (select book_id from '+TBL_BOOKS+' where avail<=1)'
@@ -218,7 +218,7 @@ def findbook(name, path, setavail=0):
     # а книга была восстановлена в своем старом месте
     # то произойдет восстановление записи об этой книги а не добавится новая
     try:
-        book = Book.objects.get(filename=name[:SIZE_BOOK_FILENAME], path=path[:SIZE_BOOK_PATH])
+        book = Book.all_objects.get(filename=name[:SIZE_BOOK_FILENAME], path=path[:SIZE_BOOK_PATH])
     except Book.DoesNotExist:
         book = None
 
