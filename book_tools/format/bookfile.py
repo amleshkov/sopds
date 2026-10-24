@@ -1,7 +1,9 @@
-import os, re
-from abc import abstractmethod, ABCMeta
+import os
+import re
+from abc import ABCMeta, abstractmethod
 
 from book_tools.format.util import minify_cover
+
 
 class BookFile(object):
     __metaclass__ = ABCMeta

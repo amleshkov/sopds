@@ -1,5 +1,6 @@
 import xml.parsers.expat
 
+
 class fb2tag:
    def __init__(self,tags):
        self.tags=tags
@@ -42,7 +43,7 @@ class fb2tag:
 
    def setvalue(self,value):
        if (self.index+1)==self.size:
-          if self.process_value==False:
+          if not self.process_value:
              self.current_value=value
              self.process_value=True
           else:
@@ -90,7 +91,7 @@ class fb2cover(fb2tag):
        result=fb2tag.tagopen(self,tag,attrs)
        if result:
           idvalue=self.getattr('id')
-          if idvalue!=None:
+          if idvalue is not None:
              idvalue=idvalue.lower()
              if idvalue==self.cover_name:
                 self.iscover=True
@@ -103,7 +104,7 @@ class fb2cover(fb2tag):
        fb2tag.tagclose(self,tag)
 
    def setcovername(self,cover_name):
-       if cover_name!=None and cover_name!='':
+       if cover_name is not None and cover_name!='':
           self.cover_name=cover_name
 
 
@@ -133,7 +134,7 @@ class fb2parser:
        self.series=fb2tag(('description','title-info','sequence'))
        if self.rc!=0:
           self.cover_name = fb2tag (('description','coverpage','image'))
-          self.cover_image = fb2cover (('fictionbook','binary'));
+          self.cover_image = fb2cover (('fictionbook','binary'))
        self.stoptag='description'
        self.process_description=True
        self.parse_error=0
@@ -168,7 +169,7 @@ class fb2parser:
           if self.rc!=0:
              if self.cover_name.tagopen(name,attrs):
                 cover_name=self.cover_name.getattr('l:href')
-                if cover_name=='' or cover_name==None:
+                if cover_name == '' or cover_name is None:
                    cover_name=self.cover_name.getattr('xlink:href')
                 # Если имя файла не начинается с # то значит данных локально в файле fb2 - нет
                 if len(cover_name)>0 and cover_name[0]=='#':

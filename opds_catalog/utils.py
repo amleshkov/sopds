@@ -2,7 +2,6 @@
 #
 # Вспомогательные функции
 #
-import unicodedata
 
 def translit(s):
     """Russian translit: converts 'привет'->'privet'"""

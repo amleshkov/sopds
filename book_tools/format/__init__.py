@@ -1,19 +1,18 @@
 #import magic
 import os
 import zipfile
-from xml import sax
 from io import BytesIO
+from xml import sax
 
-from book_tools.format.mimetype import Mimetype
-
-from book_tools.format.util import list_zip_file_infos
 from book_tools.format.epub import EPub
 from book_tools.format.fb2 import FB2, FB2Zip
 from book_tools.format.fb2sax import FB2sax
-from book_tools.format.other import Dummy
+from book_tools.format.mimetype import Mimetype
 from book_tools.format.mobi import Mobipocket
-
+from book_tools.format.other import Dummy
+from book_tools.format.util import list_zip_file_infos
 from constance import config
+
 
 class mime_detector:
     @staticmethod
@@ -65,14 +64,14 @@ def detect_mime(file, original_filename):
                         with zip_file.open('mimetype') as mimetype_file:
                             if mimetype_file.read(30).decode().rstrip('\n\r') == Mimetype.EPUB:
                                 return Mimetype.EPUB
-                    except Exception as e:
+                    except Exception:
                         pass
         elif mime == Mimetype.OCTET_STREAM:
             mobiflag =  file.read(68)
             mobiflag = mobiflag[60:]
             if mobiflag.decode() == 'BOOKMOBI':
                 return Mimetype.MOBI
-    except:
+    except Exception:
         pass
 
     return mime

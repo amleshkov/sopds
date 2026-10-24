@@ -1,30 +1,35 @@
 from random import randint
 
-from django.shortcuts import render, redirect
-from django.template.context_processors import csrf
-from django.db.models import Count, Min, Prefetch
-from django.utils.translation import gettext as _
-from django.contrib.auth import authenticate, login, logout, REDIRECT_FIELD_NAME
+from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate, login, logout
 from django.contrib.auth.decorators import user_passes_test
-from django.views.decorators.vary import vary_on_headers
+from django.db.models import Count, Min, Prefetch
+from django.http import Http404, HttpResponseBadRequest
+from django.shortcuts import redirect, render
+from django.template.context_processors import csrf
 from django.urls import reverse, reverse_lazy
 from django.utils.html import strip_tags
-from django.db.models import Q
-from django.http import HttpResponseForbidden, HttpResponseBadRequest, Http404
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
+from django.views.decorators.vary import vary_on_headers
 
 try:
     from django.utils.http import url_has_allowed_host_and_scheme
 except ImportError:
     from django.utils.http import is_safe_url as url_has_allowed_host_and_scheme
 
-from opds_catalog import models
-from opds_catalog.models import Book, Author, Series, bookshelf, Counter, Catalog, Genre, lang_menu
-from opds_catalog import settings
 from constance import config
+from opds_catalog import models, settings
+from opds_catalog.models import (
+    Author,
+    Book,
+    Catalog,
+    Counter,
+    Genre,
+    Series,
+    bookshelf,
+    lang_menu,
+)
 from opds_catalog.opds_paginator import Paginator as OPDS_Paginator
-
-
 from sopds_web_backend.settings import HALF_PAGES_LINKS
 
 
@@ -256,8 +261,8 @@ def SearchBooksView(request):
                 items.pop(0)                                   
               
         args['paginator'] = op.get_data_dict()
-        args['searchterms']=searchterms;
-        args['searchtype']=searchtype;
+        args['searchterms']=searchterms
+        args['searchtype']=searchtype
         args['books']=items   
         args['current'] = 'search'
         args['cache_id']='%s:%s:%s'%(searchterms,searchtype,op.page_num)
@@ -300,8 +305,8 @@ def SearchSeriesView(request):
             items.append(p)                     
               
         args['paginator'] = op.get_data_dict()
-        args['searchterms']=searchterms;
-        args['searchtype']=searchtype;
+        args['searchterms']=searchterms
+        args['searchtype']=searchtype
         args['series']=items     
         args['searchobject'] = 'series'
         args['current'] = 'search'        
@@ -344,8 +349,8 @@ def SearchAuthorsView(request):
             items.append(p)
             
         args['paginator'] = op.get_data_dict()              
-        args['searchterms']=searchterms;
-        args['searchtype']=searchtype;
+        args['searchterms']=searchterms
+        args['searchtype']=searchtype
         args['authors']=items     
         args['searchobject'] = 'author'
         args['current'] = 'search'       

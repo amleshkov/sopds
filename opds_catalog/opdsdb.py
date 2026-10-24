@@ -3,14 +3,35 @@
 import os
 import re
 
+from django.db import connection
 from django.db.models import Q
-from django.utils.translation import gettext as _, gettext_noop as _noop
-from django.db import transaction, connection
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_noop as _noop
 
-from opds_catalog.models import Book, Catalog, Author, Genre, Series, BookSeries, BookAuthor, BookGenre, bookshelf, Counter, LangCodes
-from opds_catalog.models import SIZE_BOOK_FILENAME, SIZE_BOOK_PATH, SIZE_BOOK_FORMAT, SIZE_BOOK_DOCDATE, SIZE_BOOK_LANG, SIZE_BOOK_TITLE, SIZE_BOOK_ANNOTATION
-from opds_catalog.models import SIZE_CAT_CATNAME, SIZE_CAT_PATH, SIZE_AUTHOR_NAME, SIZE_GENRE, SIZE_GENRE_SECTION, SIZE_GENRE_SUBSECTION, SIZE_SERIES
-
+from opds_catalog.models import (
+    SIZE_AUTHOR_NAME,
+    SIZE_BOOK_ANNOTATION,
+    SIZE_BOOK_DOCDATE,
+    SIZE_BOOK_FILENAME,
+    SIZE_BOOK_FORMAT,
+    SIZE_BOOK_LANG,
+    SIZE_BOOK_PATH,
+    SIZE_BOOK_TITLE,
+    SIZE_CAT_CATNAME,
+    SIZE_CAT_PATH,
+    SIZE_GENRE,
+    SIZE_GENRE_SUBSECTION,
+    SIZE_SERIES,
+    Author,
+    Book,
+    BookAuthor,
+    BookGenre,
+    BookSeries,
+    Catalog,
+    Genre,
+    LangCodes,
+    Series,
+)
 
 ##########################################################################
 # типы каталогов (cat_type)
@@ -122,7 +143,7 @@ def arc_skip(arcpath,arcsize):
     catalog = findcat(arcpath)
     
     # Если такого каталога еще нет в БД, то значит считаем что ZIP изменен и пропуск невозможен
-    if catalog == None:
+    if catalog is None:
         return 0
     
     # Если каталог в БД найден и его размер совпадает с текущим, то считаем что файл архива не менялся
@@ -150,7 +171,7 @@ def inp_skip(arcpath,arcsize):
     catalog = findcat(arcpath)
 
     # Если такого INPX еще нет в БД, то значит считаем что INPX изменен и пропуск невозможен
-    if catalog == None:
+    if catalog is None:
         return 0
 
     # Если INPX в БД найден и его размер совпадает с текущим, то считаем что файл INPX не менялся
@@ -178,7 +199,7 @@ def inpx_skip(arcpath, arcsize):
     catalog = findcat(arcpath)
 
     # Если такого INPX еще нет в БД, то значит считаем что INPX изменен и пропуск невозможен
-    if catalog == None:
+    if catalog is None:
         return 0
 
     # Если INPX в БД найден и его размер совпадает с текущим, то считаем что файл INPX не менялся

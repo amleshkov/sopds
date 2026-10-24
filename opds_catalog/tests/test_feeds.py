@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from django.test import Client, TestCase
 from django.urls import reverse
-from django.test import TestCase, Client
 from django.utils.translation import gettext as _
 
-from opds_catalog import opdsdb
-from opds_catalog import settings
 from constance import config
+from opds_catalog import opdsdb
 
 
 class feedsTestCase(TestCase):
@@ -19,7 +18,7 @@ class feedsTestCase(TestCase):
         c = Client()
         response = c.get('/opds/')
         self.assertEqual(response.status_code, 200)
-        response = c.get(reverse('opds:main'));
+        response = c.get(reverse('opds:main'))
         self.assertEqual(response.status_code, 200)
         self.assertIn(_('By catalogs'), response.content.decode())
         self.assertIn(_("Catalogs: %(catalogs)s, books: %(books)s.")%{"catalogs":2, "books":4}, response.content.decode())
@@ -30,7 +29,7 @@ class feedsTestCase(TestCase):
         c = Client()
         response = c.get('/opds/catalogs/')
         self.assertEqual(response.status_code, 200)
-        response = c.get(reverse('opds:catalogs'));
+        response = c.get(reverse('opds:catalogs'))
         self.assertEqual(response.status_code, 200)  
         self.assertIn('books.zip', response.content.decode())
         self.assertIn('The Sanctuary Sparrow', response.content.decode())                   
@@ -101,7 +100,7 @@ class feedsTestCase(TestCase):
         c = Client()
         response = c.get('/opds/books/')
         self.assertEqual(response.status_code, 200)
-        response = c.get(reverse('opds:lang_books'));
+        response = c.get(reverse('opds:lang_books'))
         self.assertEqual(response.status_code, 200)
         self.assertIn(_("Cyrillic"), response.content.decode())
         self.assertIn(_("Latin"), response.content.decode())
@@ -114,10 +113,10 @@ class feedsTestCase(TestCase):
         response = c.get('/opds/books/0/')
         self.assertEqual(response.status_code, 200)
         if config.SOPDS_ALPHABET_MENU:
-            response = c.get(reverse('opds:lang_books'));
+            response = c.get(reverse('opds:lang_books'))
             self.assertEqual(response.status_code, 200)
             self.assertIn(_("Cyrillic"), response.content.decode()) 
-        response = c.get(reverse('opds:char_books', kwargs={'lang_code':0}));
+        response = c.get(reverse('opds:char_books', kwargs={'lang_code':0}))
         self.assertIn("<title>T</title>", response.content.decode())
 
     def test_AuthorsFeed(self):
@@ -125,10 +124,10 @@ class feedsTestCase(TestCase):
         response = c.get('/opds/authors/0/')
         self.assertEqual(response.status_code, 200)
         if config.SOPDS_ALPHABET_MENU:        
-            response = c.get(reverse('opds:lang_authors'));
+            response = c.get(reverse('opds:lang_authors'))
             self.assertEqual(response.status_code, 200)
             self.assertIn(_("Cyrillic"), response.content.decode())  
-        response = c.get(reverse('opds:char_authors', kwargs={'lang_code':0}));    
+        response = c.get(reverse('opds:char_authors', kwargs={'lang_code':0}))    
         self.assertIn("<title>P</title>", response.content.decode())    
         
         
@@ -136,10 +135,10 @@ class feedsTestCase(TestCase):
         c = Client()
         response = c.get('/opds/genres/')
         self.assertEqual(response.status_code, 200)
-        response = c.get(reverse('opds:genres'));
+        response = c.get(reverse('opds:genres'))
         self.assertEqual(response.status_code, 200)
         self.assertIn(opdsdb.unknown_genre_en, response.content.decode()) 
-        response = c.get(reverse('opds:genres', kwargs={'section':232}));
+        response = c.get(reverse('opds:genres', kwargs={'section':232}))
         self.assertEqual(response.status_code, 200)
         self.assertIn("prose_contemporary", response.content.decode())         
 

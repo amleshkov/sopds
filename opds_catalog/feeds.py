@@ -1,23 +1,28 @@
-from django.utils import timezone
-from django.utils.translation import gettext as _
-from django.utils.feedgenerator import Atom1Feed, Enclosure, rfc3339_date
 from django.contrib.syndication.views import Feed
-from django.urls import reverse
+from django.db.models import Count, Min
 from django.http import Http404
 from django.shortcuts import render
-from django.db.models import Count, Min
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.feedgenerator import Atom1Feed, Enclosure, rfc3339_date
 from django.utils.html import strip_tags
-
-from opds_catalog.models import Book, Catalog, Author, Genre, Series, bookshelf, Counter, lang_menu
-from opds_catalog import models
-from opds_catalog import settings
-from opds_catalog.middleware import BasicAuthMiddleware
-from opds_catalog.opds_paginator import Paginator as OPDS_Paginator
+from django.utils.translation import gettext as _
 
 from book_tools.format import mime_detector
 from book_tools.format.mimetype import Mimetype
-
 from constance import config
+from opds_catalog import models, settings
+from opds_catalog.middleware import BasicAuthMiddleware
+from opds_catalog.models import (
+    Author,
+    Book,
+    Catalog,
+    Counter,
+    Genre,
+    Series,
+    bookshelf,
+)
+from opds_catalog.opds_paginator import Paginator as OPDS_Paginator
 
 
 class AuthFeed(Feed):
@@ -307,7 +312,7 @@ class CatalogsFeed(AuthFeed):
         else:
             mime = mime_detector.fmt(item['format'])
             enclosure = [opdsEnclosure(reverse("opds_catalog:download", kwargs={"book_id": item['id'], "zip_flag": 0}), mime, "http://opds-spec.org/acquisition/open-access"),]
-            if not item['format'] in settings.NOZIP_FORMATS:
+            if item['format'] not in settings.NOZIP_FORMATS:
                 mimezip = Mimetype.FB2_ZIP if mime == Mimetype.FB2 else "%s+zip" % mime
                 enclosure += [opdsEnclosure(reverse("opds_catalog:download", kwargs={"book_id": item['id'], "zip_flag": 1}), mimezip, "http://opds-spec.org/acquisition/open-access")]
             enclosure += [opdsEnclosure(reverse("opds_catalog:cover", kwargs={"book_id": item['id']}), "image/jpeg","http://opds-spec.org/image"),
@@ -321,10 +326,14 @@ class CatalogsFeed(AuthFeed):
             return item['title']
         else: 
             s="<b> Book name: </b>%(title)s<br/>"
-            if item['authors']: s += _("<b>Authors: </b>%(authors)s<br/>")
-            if item['genres']: s += _("<b>Genres: </b>%(genres)s<br/>")
-            if item['series']: s += _("<b>Series: </b>%(series)s<br/>")
-            if item['ser_no']: s += _("<b>No in Series: </b>%(ser_no)s<br/>")
+            if item['authors']:
+                s += _("<b>Authors: </b>%(authors)s<br/>")
+            if item['genres']:
+                s += _("<b>Genres: </b>%(genres)s<br/>")
+            if item['series']:
+                s += _("<b>Series: </b>%(series)s<br/>")
+            if item['ser_no']:
+                s += _("<b>No in Series: </b>%(ser_no)s<br/>")
             s += _("<b>File: </b>%(filename)s<br/><b>File size: </b>%(filesize)s<br/><b>Changes date: </b>%(docdate)s<br/>")
             s +="<p class='book'>%(annotation)s</p>"
             return s%{'title':item['title'],'filename':item['filename'], 'filesize':item['filesize'],'docdate':item['docdate'],'annotation':item['annotation'],
@@ -563,7 +572,7 @@ class SearchBooksFeed(AuthFeed):
         mime = mime_detector.fmt(item['format'])
         enclosure = [
             opdsEnclosure(reverse("opds_catalog:download", kwargs={"book_id": item['id'], "zip_flag": 0}), mime, "http://opds-spec.org/acquisition/open-access"), ]
-        if not item['format'] in settings.NOZIP_FORMATS:
+        if item['format'] not in settings.NOZIP_FORMATS:
             mimezip = Mimetype.FB2_ZIP if mime==Mimetype.FB2 else "%s+zip"%mime
             enclosure += [opdsEnclosure(reverse("opds_catalog:download", kwargs={"book_id": item['id'], "zip_flag": 1}), mimezip, "http://opds-spec.org/acquisition/open-access")]
         enclosure += [opdsEnclosure(reverse("opds_catalog:cover", kwargs={"book_id": item['id']}), "image/jpeg", "http://opds-spec.org/image"),
@@ -577,12 +586,17 @@ class SearchBooksFeed(AuthFeed):
     
     def item_description(self, item):
         s="<b> Book name: </b>%(title)s<br/>"
-        if item['authors']: s += _("<b>Authors: </b>%(authors)s<br/>")
-        if item['genres']: s += _("<b>Genres: </b>%(genres)s<br/>")
-        if item['series']: s += _("<b>Series: </b>%(series)s<br/>")
-        if item['ser_no']: s += _("<b>No in Series: </b>%(ser_no)s<br/>")
+        if item['authors']:
+            s += _("<b>Authors: </b>%(authors)s<br/>")
+        if item['genres']:
+            s += _("<b>Genres: </b>%(genres)s<br/>")
+        if item['series']:
+            s += _("<b>Series: </b>%(series)s<br/>")
+        if item['ser_no']:
+            s += _("<b>No in Series: </b>%(ser_no)s<br/>")
         s += _("<b>File: </b>%(filename)s<br/><b>File size: </b>%(filesize)s<br/><b>Changes date: </b>%(docdate)s<br/>")
-        if item['doubles']: s += _("<b>Doubles count: </b>%(doubles)s<br/>")
+        if item['doubles']:
+            s += _("<b>Doubles count: </b>%(doubles)s<br/>")
         s +="<p class='book'>%(annotation)s</p>"
         return s%{'title':item['title'],'filename':item['filename'], 'filesize':item['filesize'],'docdate':item['docdate'],
                   'doubles':item['doubles'],'annotation':item['annotation'],
@@ -865,7 +879,7 @@ class BooksFeed(AuthFeed):
 
     def get_object(self, request, lang_code=0, chars = None):    
         self.lang_code = int(lang_code)
-        if chars==None:
+        if chars is None:
             chars=''
         return (len(chars)+1, chars.upper())
         
@@ -923,7 +937,7 @@ class AuthorsFeed(AuthFeed):
 
     def get_object(self, request, lang_code=0, chars = None):    
         self.lang_code = int(lang_code)
-        if chars==None:
+        if chars is None:
             chars=''
         return (len(chars)+1, chars.upper())
         
@@ -981,7 +995,7 @@ class SeriesFeed(AuthFeed):
 
     def get_object(self, request, lang_code=0, chars = None):    
         self.lang_code = int(lang_code)
-        if chars==None:
+        if chars is None:
             chars=''
         return (len(chars)+1, chars.upper())
         

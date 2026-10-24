@@ -1,11 +1,16 @@
-import os, shutil, urllib, zipfile
-from lxml import etree
+import os
+import shutil
+import urllib
+import zipfile
 from tempfile import mktemp
+
+from lxml import etree
 
 from book_tools.format.aes import encrypt
 from book_tools.format.bookfile import BookFile
 from book_tools.format.mimetype import Mimetype
 from book_tools.format.util import list_zip_file_infos
+
 
 class EPub(BookFile):
     class Issue(object):
@@ -89,7 +94,7 @@ class EPub(BookFile):
         with self.__zip_file.open(info) as entry:
             try:
                 return etree.fromstring(entry.read(1048576))
-            except:
+            except Exception:
                 raise EPub.StructureException('\'' + info.filename + '\' is not a valid XML')
 
     def __extract_metainfo(self):
@@ -155,7 +160,7 @@ class EPub(BookFile):
             path = os.path.normpath(prefix + node.get('href')).replace('\\','/')
             try:
                 fileinfo = self.__zip_file.getinfo(path)
-            except:
+            except Exception:
                 fileinfo = self.__zip_file.getinfo(urllib.unquote(path))
             mime = node.get('media-type')
             info = {
@@ -181,43 +186,43 @@ class EPub(BookFile):
         try:
             node = xpath('/opf:package/opf:manifest/opf:item[@properties="cover-image"]')
             return image_infos(node)
-        except Exception as err:
+        except Exception:
             pass
 
         try:
             node = xpath('/opf:package/opf:metadata/opf:meta[@name="cover"]')
             return image_infos(xpath('/opf:package/opf:manifest/opf:item[@id="%s"]' % node.get('content')))
-        except Exception as err:
+        except Exception:
             pass
 
         try:
             node = xpath('/opf:package/opf:metadata/meta[@name="cover"]')
             return image_infos(xpath('/opf:package/opf:manifest/opf:item[@id="%s"]' % node.get('content')))
-        except Exception as err:
+        except Exception:
             pass
 
         try:
             node = xpath('/package/metadata/meta[@name="cover"]')
             return image_infos(xpath('/package/manifest/item[@id="%s"]' % node.get('content')))
-        except Exception as err:
+        except Exception:
             pass
 
         try:
             node = xpath('/opf:package/opf:guide/opf:reference[@type="other.ms-coverimage-standard"][@title="Cover"]')
             return image_infos(item_for_href(node.get('href')))
-        except Exception as err:
+        except Exception:
             pass
 
         try:
             node = xpath('/opf:package/opf:guide/opf:reference[@type="other.ms-coverimage-standard"]')
             return image_infos(item_for_href(node.get('href')))
-        except Exception as err:
+        except Exception:
             pass
 
         try:
             node = xpath('/opf:package/opf:manifest/opf:item[@id="cover"]')
             return image_infos(node)
-        except Exception as err:
+        except Exception:
             pass
 
         return []
@@ -225,7 +230,7 @@ class EPub(BookFile):
     def __get_root_info(self):
         try:
             container_info = self.__zip_file.getinfo(EPub.Entry.CONTAINER)
-        except:
+        except Exception:
             container_info = None
         if container_info:
             tree = self.__etree_from_entry(container_info)
@@ -266,7 +271,7 @@ class EPub(BookFile):
                 key_name = res[0].text
                 if key_name and key_name.startswith(EPub.CONTENT_ID_PREFIX):
                     content_ids.add(key_name[len(EPub.CONTENT_ID_PREFIX):])
-        except:
+        except Exception:
             pass
         return list(content_ids)
 
@@ -289,7 +294,7 @@ class EPub(BookFile):
                     algo = algorithms[0]
                 else:
                     return UNKNOWN_ENCRYPTION
-            except:
+            except Exception:
                 return UNKNOWN_ENCRYPTION
 
         if self.__contains_entry(EPub.Entry.RIGHTS):
@@ -306,7 +311,7 @@ class EPub(BookFile):
                             'token_url': token_url,
                             'content_ids': content_ids
                         }
-                except:
+                except Exception:
                     pass
             return UNKNOWN_ENCRYPTION
 

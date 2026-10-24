@@ -1,13 +1,24 @@
 from datetime import datetime
 
+from django.conf import settings as main_settings
+from django.contrib.auth.models import User
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
-from django.contrib.auth.models import User
-from django.conf import settings as main_settings
 
-from opds_catalog.models import Book, Catalog, Author, Genre, Series, bookshelf, Counter, BookAuthor, BookGenre, BookSeries
-from opds_catalog import models
-from opds_catalog import opdsdb
+from opds_catalog import models, opdsdb
+from opds_catalog.models import (
+    Author,
+    Book,
+    BookAuthor,
+    BookGenre,
+    BookSeries,
+    Catalog,
+    Counter,
+    Genre,
+    Series,
+    bookshelf,
+)
+
 
 class modelsTestCase(TestCase):
     testdatetime = datetime(2016, 1, 1, 0, 0)
@@ -117,9 +128,9 @@ class constraintsTestCase(TestCase):
 class migrationDedupTestCase(TransactionTestCase):
 
     def test_dedup_migration_removes_duplicates_and_cascades_links(self):
+        from django.apps import apps as global_apps
         from django.db import connection
         from django.db.migrations.executor import MigrationExecutor
-        from django.apps import apps as global_apps
 
         executor = MigrationExecutor(connection)
         target_back = ('opds_catalog', '0005_auto_20161204_2138')

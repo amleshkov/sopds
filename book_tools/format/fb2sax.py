@@ -1,10 +1,11 @@
-import xml.parsers.expat
-import traceback
 import base64
+import traceback
+import xml.parsers.expat
 
 from book_tools.format.bookfile import BookFile
 from book_tools.format.mimetype import Mimetype
 from book_tools.format.util import strip_symbols
+
 
 class fb2tag:
    def __init__(self,tags):
@@ -48,7 +49,7 @@ class fb2tag:
 
    def setvalue(self,value):
        if (self.index+1)==self.size:
-          if self.process_value==False:
+          if not self.process_value:
              self.current_value=value
              self.process_value=True
           else:
@@ -96,7 +97,7 @@ class fb2cover(fb2tag):
        result=fb2tag.tagopen(self,tag,attrs)
        if result:
           idvalue=self.getattr('id')
-          if idvalue!=None:
+          if idvalue is not None:
              idvalue=idvalue.lower()
              if idvalue==self.cover_name:
                 self.iscover=True
@@ -109,7 +110,7 @@ class fb2cover(fb2tag):
        fb2tag.tagclose(self,tag)
 
    def setcovername(self,cover_name):
-       if cover_name!=None and cover_name!='':
+       if cover_name is not None and cover_name!='':
           self.cover_name=cover_name
 
 
@@ -139,7 +140,7 @@ class fb2parser:
        self.series=fb2tag(('description','title-info','sequence'))
        if self.rc!=0:
           self.cover_name = fb2tag (('description','coverpage','image'))
-          self.cover_image = fb2cover (('fictionbook','binary'));
+          self.cover_image = fb2cover (('fictionbook','binary'))
        self.stoptag='description'
        self.process_description=True
        self.parse_error=0
@@ -174,7 +175,7 @@ class fb2parser:
           if self.rc!=0:
              if self.cover_name.tagopen(name,attrs):
                 cover_name=self.cover_name.getattr('l:href')
-                if cover_name=='' or cover_name==None:
+                if cover_name == '' or cover_name is None:
                    cover_name=self.cover_name.getattr('xlink:href')
                 # Если имя файла не начинается с # то значит данных локально в файле fb2 - нет
                 if len(cover_name)>0 and cover_name[0]=='#':
@@ -279,7 +280,7 @@ class FB2sax(BookFile):
                 s=imgfb2parser.cover_image.cover_data
                 content=base64.b64decode(s)
                 return content
-            except :
+            except Exception:
                 return None
         return None
 
@@ -294,7 +295,7 @@ class FB2sax(BookFile):
     def __detect_docdate(self):
         res = self.fb2parser.docdate.getattr('value') or ''
         if len(res)==0 and len(self.fb2parser.docdate.getvalue()) > 0:
-            res = self.fb2parser.docdate.getvalue()[0].strip();
+            res = self.fb2parser.docdate.getvalue()[0].strip()
         if len(res) > 0:
             self.__set_docdate__(res)
         return None

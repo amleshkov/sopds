@@ -7,6 +7,7 @@ Created on 14 нояб. 2016 г.
 # -*- coding: utf-8 -*-
 import os
 import zipfile
+
 #from opds_catalog import settings
 from constance import config
 
@@ -98,7 +99,7 @@ class Inpx:
                         meta_data[key] = ''
 
                 # Если книга помечена как удаленная в INP, то пропускаем вызов callback
-                if not (meta_data[sDel].strip() in ['','0']):
+                if meta_data[sDel].strip() not in ['','0']:
                     continue
 
                 # Если решили проверять на наличие ZIP файла или книги в ZIP, а самого ZIP файла нет - то пропускаем вызов callback
@@ -108,7 +109,7 @@ class Inpx:
 
                 # Если нужно выполнить проверку книги в ZIP, а ее там не оказалось, то пропускаем вызов callback
                 if self.TEST_FILES:
-                    if not "%s.%s"%(meta_data[sFile],meta_data[sExt]) in zipfile.ZipFile(zip_file, "r").namelist():
+                    if "%s.%s"%(meta_data[sFile],meta_data[sExt]) not in zipfile.ZipFile(zip_file, "r").namelist():
                         continue
 
                 self.append_callback(self.inpx_file, inp_name, meta_data)

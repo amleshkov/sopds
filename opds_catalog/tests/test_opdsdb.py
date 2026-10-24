@@ -1,7 +1,8 @@
 from django.test import TestCase
-from opds_catalog.models import Catalog, BookSeries
 
 from opds_catalog import opdsdb
+from opds_catalog.models import BookSeries, Catalog
+
 
 class opdsdbTestCase(TestCase):
 

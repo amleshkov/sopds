@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from opds_catalog.fb2parse import fb2parser
 
+
 class parserTestCase(TestCase):
     test_module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     test_ROOTLIB = os.path.join(test_module_path, 'tests/data')

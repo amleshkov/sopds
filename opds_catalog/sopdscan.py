@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import os
-import time
 import datetime
 import logging
+import os
 import re
+import time
 from functools import partial
-
-from book_tools.format import create_bookfile
-from book_tools.format.util import strip_symbols
 
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from opds_catalog import fb2parse, opdsdb
-from opds_catalog import inpx_parser
 import opds_catalog.zipf as zipfile
-
+from book_tools.format import create_bookfile
+from book_tools.format.util import strip_symbols
 from constance import config
+from opds_catalog import fb2parse, inpx_parser, opdsdb
 
 BATCH_SIZE = 100
 
@@ -52,8 +49,10 @@ class opdsScanner:
     def log_options(self):
         self.logger.info(' ***** Starting sopds-scan...')
         self.logger.debug('OPTIONS SET')
-        if config.SOPDS_ROOT_LIB!=None:       self.logger.debug('root_lib = %s'%config.SOPDS_ROOT_LIB)
-        if config.SOPDS_FB2SAX != None:       self.logger.info('FB2SAX = %s'%config.SOPDS_FB2SAX)
+        if config.SOPDS_ROOT_LIB is not None:
+            self.logger.debug('root_lib = %s' % config.SOPDS_ROOT_LIB)
+        if config.SOPDS_FB2SAX is not None:
+            self.logger.info('FB2SAX = %s' % config.SOPDS_FB2SAX)
 
 
     def log_stats(self):
@@ -186,7 +185,7 @@ class opdsScanner:
 
         rel_path_current = os.path.join(self.rel_path,meta_data[inpx_parser.sFolder])
 
-        if opdsdb.findbook(name, rel_path_current, 1) == None:
+        if opdsdb.findbook(name, rel_path_current, 1) is None:
             cat = opdsdb.addcattree(rel_path_current, opdsdb.CAT_INP)
             book=opdsdb.addbook(name,rel_path_current,cat,meta_data[inpx_parser.sExt],title,annotation,docdate,lang,meta_data[inpx_parser.sSize],opdsdb.CAT_INP)
             self.books_added+=1
@@ -255,7 +254,7 @@ class opdsScanner:
             rel_path=os.path.relpath(full_path,config.SOPDS_ROOT_LIB)
             self.logger.debug("Attempt to add book "+rel_path+"/"+name)
             try:
-                if opdsdb.findbook(name, rel_path, 1) == None:
+                if opdsdb.findbook(name, rel_path, 1) is None:
                     if archive==0:
                         cat=opdsdb.addcattree(rel_path,archive)
 

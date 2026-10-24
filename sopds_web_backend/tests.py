@@ -2,12 +2,11 @@
 
 from urllib.parse import quote
 
-from django.urls import reverse
-from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from django.test import Client, TestCase
+from django.urls import reverse
 
 from constance import config
-
 from opds_catalog.models import Book, bookshelf
 
 
@@ -135,6 +134,7 @@ class queryCountTestCase(TestCase):
     def test_bookshelf_processor_without_n_plus_1(self):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
+
         from opds_catalog.models import Book, bookshelf
         for book in Book.objects.all()[:4]:
             bookshelf.objects.create(user=self.user, book=book)

@@ -2,12 +2,11 @@
 
 import os
 
-from django.urls import reverse
-from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from django.test import Client, TestCase
+from django.urls import reverse
 
 from constance import config
-
 from opds_catalog.models import Book
 
 
@@ -70,7 +69,7 @@ class DownloadsErrorHandlingTestCase(TestCase):
         self.test_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
         config.SOPDS_ROOT_LIB = self.test_root
         config.SOPDS_AUTH = False
-        from opds_catalog.models import Catalog, Book
+        from opds_catalog.models import Book, Catalog
         ghost_catalog = Catalog.objects.get(path='.')
         Book.objects.create(filename='ghost.fb2', path='nonexistent_dir', filesize=10,
                             format='fb2', catalog=ghost_catalog, docdate='', lang='ru',
@@ -101,7 +100,6 @@ class DownloadsStreamingTestCase(TestCase):
         config.SOPDS_AUTH = False
 
     def test_loose_book_streams_identical_bytes(self):
-        import io as io_mod
         book = Book.objects.get(filename='262001.fb2')
         response = Client().get(reverse('opds:download', kwargs={'book_id': book.id, 'zip_flag': 0}))
         self.assertEqual(response.status_code, 200)
@@ -119,6 +117,7 @@ class DownloadsStreamingTestCase(TestCase):
 
     def test_zip_flag_wraps_book_into_zip(self):
         import io as io_mod
+
         import opds_catalog.zipf as zipf
         book = Book.objects.get(filename='262001.fb2')
         response = Client().get(reverse('opds:download', kwargs={'book_id': book.id, 'zip_flag': 1}))

@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
 
+import io
 import logging
 import os
-import io
 from functools import wraps
 
-from django.http import HttpResponse, Http404, FileResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.views.decorators.cache import cache_page
+from PIL import Image
 
-from opds_catalog.models import Book, bookshelf
-from opds_catalog import settings, utils, opdsdb
-from opds_catalog.middleware import sopds_auth_required
 import opds_catalog.zipf as zipfile
-
 from book_tools.format import create_bookfile, mime_detector
 from book_tools.format.mimetype import Mimetype
-
 from constance import config
-from PIL import Image
+from opds_catalog import opdsdb, settings, utils
+from opds_catalog.middleware import sopds_auth_required
+from opds_catalog.models import Book, bookshelf
 
 logger = logging.getLogger(__name__)
 

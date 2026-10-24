@@ -1,17 +1,18 @@
 
-import os.path
-import datetime
-import struct
-import re
 import array
+import datetime
+import os.path
+import re
+import struct
 import sys
+
 try:
     from collections import OrderedDict
-except:
+except Exception:
     from ordereddict import OrderedDict
 
-from book_tools.pymobi.util import hexdump, decodeVarint, toStr, toByte
 from book_tools.pymobi import compression
+from book_tools.pymobi.util import decodeVarint, hexdump, toByte, toStr
 
 DEBUG = False
 
@@ -355,7 +356,7 @@ class BookMobi(object):
                         exth_addr + offset + 8)
                     self.mobi_exth[recordType] = data
                     if DEBUG:
-                        if not recordType in mobi_exth_type:
+                        if recordType not in mobi_exth_type:
                             print(recordType, data, 'unknown type')
                     offset += recordLength
                     count += 1
@@ -480,8 +481,8 @@ class BookMobi(object):
         print('Dump image')
         img_idx_base = int(self.mobi['firstImageIndex'])
         img_pattern = (
-            b'''<img\s+recindex=['"](\d+)['"]''',
-            b'''<img\s+src=['"]kindle:embed:(\d+)\?mime=image/jpg['"]''',
+            rb'''<img\s+recindex=['"](\d+)['"]''',
+            rb'''<img\s+src=['"]kindle:embed:(\d+)\?mime=image/jpg['"]''',
         )
         for pattern in img_pattern:
             regex = re.compile(pattern, re.I)

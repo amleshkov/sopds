@@ -1,10 +1,15 @@
-import base64, os, traceback, zipfile
-from lxml import etree
+import base64
+import os
+import traceback
+import zipfile
 from abc import abstractmethod
+
+from lxml import etree
 
 from book_tools.format.bookfile import BookFile
 from book_tools.format.mimetype import Mimetype
 from book_tools.format.util import list_zip_file_infos
+
 
 class FB2StructureException(Exception):
     def __init__(self, error):
@@ -52,7 +57,7 @@ class FB2Base(BookFile):
             with open(os.path.join(working_dir, 'cover.jpeg'), 'wb') as cover_file:
                 cover_file.write(content)
             return ('cover.jpeg', False)
-        except:
+        except Exception:
             return (None, False)
 
     def extract_cover_memory(self):
@@ -119,7 +124,6 @@ class FB2Base(BookFile):
 
         res = tree.xpath('/fb:FictionBook/fb:description/fb:title-info/fb:author', namespaces=self.__namespaces)
         if len(res) == 0:
-            use_namespaces = False
             res = tree.xpath('/FictionBook/description/title-info/author')
 
         for node in res:
@@ -128,7 +132,6 @@ class FB2Base(BookFile):
     def __detect_language(self, tree):
         res = tree.xpath('/fb:FictionBook/fb:description/fb:title-info/fb:lang', namespaces=self.__namespaces)
         if len(res) == 0:
-            use_namespaces = False
             res = tree.xpath('/FictionBook/description/title-info/lang')
         if len(res) > 0:
             self.language_code = res[0].text
@@ -136,7 +139,6 @@ class FB2Base(BookFile):
     def __detect_tags(self, tree):
         res = tree.xpath('/fb:FictionBook/fb:description/fb:title-info/fb:genre', namespaces=self.__namespaces)
         if len(res) == 0:
-            use_namespaces = False
             res = tree.xpath('/FictionBook/description/title-info/genre')
         for node in res:
             self.__add_tag__(node.text)
@@ -144,7 +146,6 @@ class FB2Base(BookFile):
     def __detect_series_info(self, tree):
         res = tree.xpath('/fb:FictionBook/fb:description/fb:title-info/fb:sequence', namespaces=self.__namespaces)
         if len(res) == 0:
-            use_namespaces = False
             res = tree.xpath('/FictionBook/description/title-info/sequence')
         if len(res) > 0:
             title = BookFile.__normalise_string__(res[0].get('name'))
@@ -201,7 +202,7 @@ class FB2Zip(FB2Base):
         with self.__zip_file.open(self.__infos[0]) as entry:
             try:
                 return etree.fromstring(entry.read(50 * 1024 * 1024))
-            except:
+            except Exception:
                 raise FB2StructureException('\'%s\' is not a valid XML' % self.__infos[0].filename)
 
     def __exit__(self, kind, value, traceback):

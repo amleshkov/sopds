@@ -1,20 +1,20 @@
+import logging
 import os
 import signal
 import sys
-import logging
 
 from apscheduler.schedulers.blocking import BlockingScheduler
-
-
-from django.core.management.base import BaseCommand
-from django.db import transaction, connection, connections
 from django.conf import settings as main_settings
+from django.core.management.base import BaseCommand
+from django.db import connection, connections
 
+from constance import config
+
+#from opds_catalog.settings import SCANNER_LOG, SCAN_SHED_DAY, SCAN_SHED_DOW, SCAN_SHED_HOUR, SCAN_SHED_MIN, LOGLEVEL, SCANNER_PID
+from opds_catalog import settings
 from opds_catalog.models import Counter
 from opds_catalog.sopdscan import opdsScanner
-#from opds_catalog.settings import SCANNER_LOG, SCAN_SHED_DAY, SCAN_SHED_DOW, SCAN_SHED_HOUR, SCAN_SHED_MIN, LOGLEVEL, SCANNER_PID
-from opds_catalog import settings 
-from constance import config
+
 
 class Command(BaseCommand):
     help = 'Scan Books Collection.'

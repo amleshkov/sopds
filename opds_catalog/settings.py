@@ -1,8 +1,6 @@
 import logging
-import os
+
 from django.conf import settings
-from django.utils import translation
-from constance import config
 
 loglevels={'debug':logging.DEBUG,'info':logging.INFO,'warning':logging.WARNING,'error':logging.ERROR,'critical':logging.CRITICAL,'none':logging.NOTSET}
 NOZIP_FORMATS = ['epub', 'mobi']
@@ -20,6 +18,7 @@ else:
     LOGLEVEL=logging.NOTSET
     
 from django.dispatch import receiver
+
 #from constance.signals import config_updated
 #
 #@receiver(config_updated)
@@ -34,12 +33,13 @@ def constance_update_all():
 # Переопределяем некоторые функции для SQLite, которые работают неправлено
 from django.db.backends.signals import connection_created
 
+
 def sopds_upper(s):
     return s.upper()
 
-def sopds_substring(s,i,l):
+def sopds_substring(s, i, start, length):
     i = i - 1
-    return s[i:i+l]
+    return s[i:i+length]
 
 def sopds_concat(s1='',s2='',s3=''):
     return "%s%s%s"%(s1,s2,s3)
@@ -48,5 +48,5 @@ def sopds_concat(s1='',s2='',s3=''):
 def extend_sqlite(connection=None, **kwargs):
     if connection.vendor == "sqlite":
         connection.connection.create_function('upper',1,sopds_upper)
-        connection.connection.create_function('substring',3,sopds_substring)
+        connection.connection.create_function('substring', 3, sopds_substring)
         connection.connection.create_function('concat',3,sopds_concat)

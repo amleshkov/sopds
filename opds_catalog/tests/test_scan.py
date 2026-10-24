@@ -1,13 +1,16 @@
 import os
+import shutil
+import tempfile
 
 from django.test import TestCase
 
-from opds_catalog import opdsdb
-from opds_catalog.sopdscan import opdsScanner
-#from opds_catalog import settings
-from opds_catalog.models import Book, Catalog, Author, Genre, Series
-
 from constance import config
+from opds_catalog import opdsdb
+
+#from opds_catalog import settings
+from opds_catalog.models import Author, Book, Catalog, Genre, Series
+from opds_catalog.sopdscan import opdsScanner
+
 
 class scanTestCase(TestCase):
     test_module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -170,13 +173,6 @@ class scanTestCase(TestCase):
         self.assertEqual(Catalog.objects.all().count(), 2)
 
 
-import shutil
-import tempfile
-from io import StringIO
-
-from django.test import TestCase
-
-
 class scanResilienceTestCase(TestCase):
     test_module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     test_ROOTLIB = os.path.join(test_module_path, 'tests/data')
@@ -251,10 +247,10 @@ class scanResilienceTestCase(TestCase):
             self.assertFalse(Book.objects.filter(filename='b.fb2').exists())
 
     def test_scan_is_active_reset_after_failure(self):
-        from unittest import mock
-        from opds_catalog.management.commands.sopds_scanner import Command
-
         import logging
+        from unittest import mock
+
+        from opds_catalog.management.commands.sopds_scanner import Command
         cmd = Command()
         cmd.logger = logging.getLogger('')
         with mock.patch('opds_catalog.management.commands.sopds_scanner.opdsScanner') as mocked:

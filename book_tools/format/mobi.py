@@ -1,10 +1,11 @@
-import os, shutil
+import os
+import shutil
 from tempfile import mkdtemp
-
-from book_tools.pymobi.mobi import BookMobi
 
 from book_tools.format.bookfile import BookFile
 from book_tools.format.mimetype import Mimetype
+from book_tools.pymobi.mobi import BookMobi
+
 
 class Mobipocket(BookFile):
     def __init__(self, file, original_filename):
