@@ -147,6 +147,16 @@ class opdsFeed(Atom1Feed):
                                                      "title":_("Book doublicates")})
                 handler.characters("\n")
             
+
+def feed_book_item(row):
+    return {'is_catalog':0, 'lang_code': row.lang_code, 'filename': row.filename, 'path': row.path, \
+            'registerdate': row.registerdate, 'id': row.id, 'annotation': strip_tags(row.annotation), \
+            'docdate': row.docdate, 'format': row.format, 'title': row.title, 'filesize': row.filesize//1000,
+            'authors': [{'id': a.id, 'full_name': a.full_name} for a in row.authors.all()],
+            'genres': [{'id': g.id, 'subsection': g.subsection} for g in row.genres.all()],
+            'series': [{'id': s.id, 'ser': s.ser} for s in row.series.all()],
+            'ser_no': [{'ser_no': bs.ser_no} for bs in row.bookseries_set.all()]}
+
 class MainFeed(AuthFeed):
     feed_type = opdsFeed
     title = settings.TITLE
@@ -238,12 +248,8 @@ class CatalogsFeed(AuthFeed):
             p = {'is_catalog':1, 'title': row.cat_name,'id': row.id, 'cat_type':row.cat_type, 'parent_id':row.parent_id}       
             items.append(p)
               
-        for row in books_list[op.d2_first_pos:op.d2_last_pos+1]:
-            p = {'is_catalog':0, 'lang_code': row.lang_code, 'filename': row.filename, 'path': row.path, \
-                  'registerdate': row.registerdate, 'id': row.id, 'annotation': strip_tags(row.annotation), \
-                  'docdate': row.docdate, 'format': row.format, 'title': row.title, 'filesize': row.filesize//1000,
-                  'authors':row.authors.values(), 'genres':row.genres.values(), 'series':row.series.values(), 'ser_no':row.bookseries_set.values('ser_no')}
-            items.append(p)
+        for row in books_list[op.d2_first_pos:op.d2_last_pos+1].prefetch_related('authors', 'genres', 'series', 'bookseries_set'):
+            items.append(feed_book_item(row))
             
         return items, cat, op.get_data_dict()            
 
@@ -467,11 +473,17 @@ class SearchBooksFeed(AuthFeed):
         start = op.d1_first_pos if ((op.d1_first_pos==0) or (not summary_DOUBLES_HIDE)) else op.d1_first_pos-1
         finish = op.d1_last_pos
         
-        for row in books[start:finish+1]:
+        page_queryset = books[start:finish+1].prefetch_related('authors', 'genres', 'series', 'bookseries_set')
+        books_page = list(page_queryset)
+
+        for row in books_page:
             p = {'doubles':0, 'lang_code': row.lang_code, 'filename': row.filename, 'path': row.path, \
                   'registerdate': row.registerdate, 'id': row.id, 'annotation': strip_tags(row.annotation), \
                   'docdate': row.docdate, 'format': row.format, 'title': row.title, 'filesize': row.filesize//1000,
-                  'authors':row.authors.values(), 'genres':row.genres.values(), 'series':row.series.values(), 'ser_no':row.bookseries_set.values('ser_no')}
+                  'authors': [{'id': a.id, 'full_name': a.full_name} for a in row.authors.all()],
+                  'genres': [{'id': g.id, 'subsection': g.subsection} for g in row.genres.all()],
+                  'series': [{'id': s.id, 'ser': s.ser} for s in row.series.all()],
+                  'ser_no': [{'ser_no': bs.ser_no} for bs in row.bookseries_set.all()]}
             if summary_DOUBLES_HIDE:
                 title = p['title'] 
                 authors_set = {a['id'] for a in p['authors']}         
@@ -646,18 +658,20 @@ class SearchAuthorsFeed(AuthFeed):
         if searchtype == 'm':
             authors = Author.objects.filter(search_full_name__contains=searchterms.upper()).order_by("search_full_name")
         elif searchtype == 'b':
-            authors = Author.objects.filter(search_full_name__startswith=searchterms.upper()).order_by("search_full_name") 
+            authors = Author.objects.filter(search_full_name__startswith=searchterms.upper()).order_by("search_full_name")
         elif searchtype == 'e':
             authors = Author.objects.filter(search_full_name=searchterms.upper()).order_by("search_full_name")
-            
+
+        authors = authors.annotate(book_count=Count('book'))
+
         # Создаем результирующее множество
         authors_count = authors.count()
-        op = OPDS_Paginator(authors_count, 0, page_num, config.SOPDS_MAXITEMS)        
+        op = OPDS_Paginator(authors_count, 0, page_num, config.SOPDS_MAXITEMS)
         items = []
-        
+
         for row in authors[op.d1_first_pos:op.d1_last_pos+1]:
-            p = {'id':row.id, 'full_name':row.full_name, 'lang_code': row.lang_code, 'book_count': Book.objects.filter(authors=row).count()}
-            items.append(p)    
+            p = {'id':row.id, 'full_name':row.full_name, 'lang_code': row.lang_code, 'book_count': row.book_count}
+            items.append(p)
                                 
         return {"authors":items, "searchterms":searchterms, "searchtype":searchtype, "paginator":op.get_data_dict()}
 
@@ -689,7 +703,7 @@ class SearchAuthorsFeed(AuthFeed):
         return item['full_name']
     
     def item_description(self, item):
-        return _("Books count: %s")%(Book.objects.filter(authors=item['id']).count())     
+        return _("Books count: %s")%item['book_count']
 
     def item_guid(self, item):
         return "a:%s"%(item['id'])

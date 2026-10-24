@@ -2,7 +2,7 @@ from random import randint
 
 from django.shortcuts import render, redirect
 from django.template.context_processors import csrf
-from django.db.models import Count, Min
+from django.db.models import Count, Min, Prefetch
 from django.utils.translation import gettext as _
 from django.contrib.auth import authenticate, login, logout, REDIRECT_FIELD_NAME
 from django.contrib.auth.decorators import user_passes_test
@@ -54,9 +54,8 @@ def sopds_processor(request):
         user=request.user
         if user.is_authenticated:
             result=[]
-            for row in bookshelf.objects.filter(user=user).order_by('-readtime')[:8]:
-                book = Book.objects.get(id=row.book_id)
-                p = {'id':row.id, 'readtime': row.readtime, 'book_id': row.book_id, 'title': book.title, 'authors':book.authors.values()}
+            for row in bookshelf.objects.select_related('book').filter(user=user).order_by('-readtime')[:8]:
+                p = {'id':row.id, 'readtime': row.readtime, 'book_id': row.book_id, 'title': row.book.title}
                 result.append(p)
             args['bookshelf']=result
         
@@ -206,17 +205,26 @@ def SearchBooksView(request):
         summary_DOUBLES_HIDE =  config.SOPDS_DOUBLES_HIDE and (searchtype != 'd')
         start = op.d1_first_pos if ((op.d1_first_pos==0) or (not summary_DOUBLES_HIDE)) else op.d1_first_pos-1
         finish = op.d1_last_pos
-        
-        for row in books[start:finish+1]:
+
+        page_queryset = books[start:finish+1]
+        if config.SOPDS_AUTH:
+            page_queryset = page_queryset.prefetch_related(
+                'authors', 'genres', 'series', 'bookseries_set',
+                Prefetch('bookshelf_set', queryset=bookshelf.objects.filter(user=request.user), to_attr='user_shelf'))
+        else:
+            page_queryset = page_queryset.prefetch_related('authors', 'genres', 'series', 'bookseries_set')
+        books_page = list(page_queryset)
+        for row in books_page:
+
             p = {'doubles':0, 'lang_code': row.lang_code, 'filename': row.filename, 'path': row.path, \
                   'registerdate': row.registerdate, 'id': row.id, 'annotation': strip_tags(row.annotation), \
                   'docdate': row.docdate, 'format': row.format, 'title': row.title, 'filesize': row.filesize//1000,\
-                  'authors': row.authors.values(), 'genres': row.genres.values(), 'series': row.series.values(),'ser_no': row.bookseries_set.values('ser_no'),\
-                  'readtime':row.bookshelf_set.filter(user=request.user).values('readtime') if config.SOPDS_AUTH else None
+                  'authors': row.authors.all(), 'genres': row.genres.all(), 'series': row.series.all(), 'ser_no': row.bookseries_set.all(),\
+                  'readtime': row.user_shelf[:1] if config.SOPDS_AUTH else None
                  }
             if summary_DOUBLES_HIDE:
                 title = p['title']
-                authors_set = {a['id'] for a in p['authors']}         
+                authors_set = {a.id for a in p['authors']}
                 if title.upper()==prev_title.upper() and authors_set==prev_authors_set:
                     items[-1]['doubles']+=1
                 else:
@@ -310,20 +318,22 @@ def SearchAuthorsView(request):
         page_num = page_num if page_num>0 else 1
         
         if searchtype == 'm':
-            authors = Author.objects.filter(search_full_name__contains=searchterms.upper()).order_by('search_full_name')   
+            authors = Author.objects.filter(search_full_name__contains=searchterms.upper()).order_by('search_full_name')
         elif searchtype == 'b':
-            authors = Author.objects.filter(search_full_name__startswith=searchterms.upper()).order_by('search_full_name')    
-        elif searchtype == 'e': 
-            authors = Author.objects.filter(search_full_name=searchterms.upper()).order_by('search_full_name')    
-                        
+            authors = Author.objects.filter(search_full_name__startswith=searchterms.upper()).order_by('search_full_name')
+        elif searchtype == 'e':
+            authors = Author.objects.filter(search_full_name=searchterms.upper()).order_by('search_full_name')
+
+        authors = authors.annotate(book_count=Count('book'))
+
         # Создаем результирующее множество
         authors_count = authors.count()
-        op = OPDS_Paginator(authors_count, 0, page_num, config.SOPDS_MAXITEMS, HALF_PAGES_LINKS)        
+        op = OPDS_Paginator(authors_count, 0, page_num, config.SOPDS_MAXITEMS, HALF_PAGES_LINKS)
         items = []
-        
+
         for row in authors[op.d1_first_pos:op.d1_last_pos+1]:
-            p = {'id':row.id, 'full_name':row.full_name, 'lang_code': row.lang_code, 'book_count': Book.objects.filter(authors=row).count()}
-            items.append(p)                     
+            p = {'id':row.id, 'full_name':row.full_name, 'lang_code': row.lang_code, 'book_count': row.book_count}
+            items.append(p)
             
         args['paginator'] = op.get_data_dict()              
         args['searchterms']=searchterms;
@@ -369,15 +379,23 @@ def CatalogsView(request):
     items = []
     
     for row in catalogs_list[op.d1_first_pos:op.d1_last_pos+1]:
-        p = {'is_catalog':1, 'title': row.cat_name,'id': row.id, 'cat_type':row.cat_type, 'parent_id':row.parent_id}       
+        p = {'is_catalog':1, 'title': row.cat_name,'id': row.id, 'cat_type':row.cat_type, 'parent_id':row.parent_id}
         items.append(p)
-          
-    for row in books_list[op.d2_first_pos:op.d2_last_pos+1]:
+
+    page_queryset = books_list[op.d2_first_pos:op.d2_last_pos+1]
+    if config.SOPDS_AUTH:
+        page_queryset = page_queryset.prefetch_related(
+            'authors', 'genres', 'series', 'bookseries_set',
+            Prefetch('bookshelf_set', queryset=bookshelf.objects.filter(user=request.user), to_attr='user_shelf'))
+    else:
+        page_queryset = page_queryset.prefetch_related('authors', 'genres', 'series', 'bookseries_set')
+
+    for row in page_queryset:
         p = {'is_catalog':0, 'lang_code': row.lang_code, 'filename': row.filename, 'path': row.path, \
               'registerdate': row.registerdate, 'id': row.id, 'annotation': strip_tags(row.annotation), \
               'docdate': row.docdate, 'format': row.format, 'title': row.title, 'filesize': row.filesize//1000,\
-              'authors':row.authors.values(), 'genres':row.genres.values(), 'series':row.series.values(), 'ser_no':row.bookseries_set.values('ser_no'),\
-              'readtime': row.bookshelf_set.filter(user=request.user).values('readtime') if config.SOPDS_AUTH else None
+              'authors':row.authors.all(), 'genres':row.genres.all(), 'series':row.series.all(), 'ser_no':row.bookseries_set.all(),\
+              'readtime': row.user_shelf[:1] if config.SOPDS_AUTH else None
              }
         items.append(p)
                     
