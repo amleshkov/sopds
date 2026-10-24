@@ -180,3 +180,43 @@ class errorHandlingTestCase(TestCase):
     def test_genres_view_unknown_section_404(self):
         response = Client().get(reverse('web:genre') + '?section=99999')
         self.assertEqual(response.status_code, 404)
+
+
+class pagesSmokeTestCase(TestCase):
+    fixtures = ['testdb.json']
+
+    def setUp(self):
+        config.SOPDS_AUTH = False
+
+    def test_main_page(self):
+        response = Client().get(reverse('web:main'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_catalogs_pages(self):
+        c = Client()
+        response = c.get(reverse('web:catalog'))
+        self.assertEqual(response.status_code, 200)
+        response = c.get(reverse('web:catalog'), {'cat': 4})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Драконьи Услуги')
+
+    def test_genres_pages(self):
+        c = Client()
+        response = c.get(reverse('web:genre'))
+        self.assertEqual(response.status_code, 200)
+        response = c.get(reverse('web:genre'), {'section': 232})
+        self.assertEqual(response.status_code, 200)
+
+    def test_series_search_page(self):
+        response = Client().get(reverse('web:searchseries'), {'searchtype': 'm', 'searchterms': ''})
+        self.assertEqual(response.status_code, 200)
+
+    def test_logout_redirects_when_authenticated(self):
+        from django.contrib.auth.models import User
+        user = User.objects.create_user('logoutuser', password='secret123')
+        config.SOPDS_AUTH = True
+        c = Client()
+        c.force_login(user)
+        response = c.get(reverse('web:logout'))
+        self.assertEqual(response.status_code, 302)
+        config.SOPDS_AUTH = False

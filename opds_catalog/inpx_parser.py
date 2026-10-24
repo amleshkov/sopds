@@ -80,7 +80,7 @@ class Inpx:
 
             finp = finpx.open(inp_file)
             for line in finp:
-                meta_list = line.split(self.inpx_separator)
+                meta_list = line.rstrip(b'\r\n').split(self.inpx_separator)
                 meta_data = {}
 
                 # Добавляем sFolder если он не определен

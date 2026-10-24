@@ -59,11 +59,21 @@ class Command(BaseCommand):
         elif action == "start":
             self.start()
         elif action == "stop":
-            pid = open(self.pidfile, "r").read()
+            try:
+                with open(self.pidfile, "r") as f:
+                    pid = f.read()
+            except OSError as e:
+                self.stdout.write("Error stopping sopds_scanner: %s" % str(e))
+                return
             self.stop(pid)
         elif action == "restart":
-            pid = open(self.pidfile, "r").read()
-            self.restart(pid)            
+            try:
+                with open(self.pidfile, "r") as f:
+                    pid = f.read()
+            except OSError as e:
+                self.stdout.write("Error restarting sopds_scanner: %s" % str(e))
+                return
+            self.restart(pid)
 
     def scan(self):
         if self.scan_is_active:

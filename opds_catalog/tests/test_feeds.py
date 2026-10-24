@@ -271,3 +271,33 @@ class feedErrorHandlingTestCase(TestCase):
                 self.assertEqual(response.status_code, 401, header)
         finally:
             config.SOPDS_AUTH = False
+
+
+class feedsExtraTestCase(TestCase):
+    fixtures = ['testdb.json']
+
+    def setUp(self):
+        config.SOPDS_AUTH = False
+
+    def test_chars_books_with_cyrillic_lang(self):
+        response = Client().get(reverse('opds:chars_books', kwargs={'lang_code': 1, 'chars': 'Д'}))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('<title>ДР', response.content.decode())
+
+    def test_select_series_feed(self):
+        response = Client().get(reverse('opds:searchbooks', kwargs={'searchtype': 'as', 'searchterms': '8'}))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Series by authors select', response.content.decode())
+
+    def test_search_series_by_author(self):
+        response = Client().get(reverse('opds:searchseries', kwargs={'searchtype': 'a', 'searchterms': '8'}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_search_books_by_author_and_series(self):
+        response = Client().get(reverse('opds:searchbooks',
+                                        kwargs={'searchtype': 'as', 'searchterms': '8', 'searchterms0': '1'}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_bookshelf_feed_anonymous_with_auth_off(self):
+        response = Client().get(reverse('opds:bookshelf'))
+        self.assertEqual(response.status_code, 200)

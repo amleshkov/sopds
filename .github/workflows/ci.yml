@@ -34,10 +34,12 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Run tests
-        run: python manage.py test
+      - name: Run tests with coverage
+        run: |
+          coverage run manage.py test
+          coverage report -m --fail-under=72
 
   e2e_test:
     runs-on: ubuntu-latest
