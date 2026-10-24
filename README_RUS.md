@@ -344,3 +344,54 @@ MySQL по сравнению с sqlite работает гораздо быст
 
 **SOPDS_CACHE_TIME** - Время хранения страницы в кэше
 (по умолчанию SOPDS_CACHE_TIME = 1200)
+
+#### 7. Обновление с оригинальной версии SimpleOPDS 0.47-devel
+
+Обновление переводит проект на Python 3.12 и Django 5.2 LTS. Данные базы (книги, авторы,
+настройки, измененные через веб-интерфейс администратора) сохраняются.
+
+7.1 Остановите работающие сервисы:
+
+    python3 manage.py sopds_server stop
+    python3 manage.py sopds_scanner stop
+
+Если использовался Telegram-бот (`sopds_telebot`), остановите и удалите его сервис — бот
+и конвертеры fb2 в epub/mobi больше не входят в состав проекта.
+
+7.2 Сделайте резервную копию базы данных (обязательно):
+
+    pg_dump -U sopds sopds > sopds_backup.sql        # PostgreSQL
+    cp db.sqlite3 db.sqlite3.bak                     # sqlite3
+
+7.3 Обновите код проекта (git pull или замените каталог).
+
+7.4 Создайте новое окружение Python 3.12 и установите зафиксированные зависимости
+(старое окружение Python 3.9 несовместимо):
+
+    python3.12 -m venv djenv
+    djenv/bin/pip install -r requirements.txt
+
+7.5 Настройте приложение через переменные окружения (ранее параметры БД правились
+напрямую в файле sopds/settings.py):
+
+    SOPDS_SECRET_KEY=<сгенерируйте: openssl rand -base64 50>   # обязательна
+    SOPDS_DB_HOST=<хост> SOPDS_DB_NAME=sopds SOPDS_DB_USER=sopds SOPDS_DB_PASSWORD=...   # только для PostgreSQL
+    SOPDS_ALLOWED_HOSTS=<список хостов через запятую>
+    SOPDS_DEBUG=True|False
+
+Для systemd-установок добавьте эти переменные в EnvironmentFile (например /opt/sopds/sopds-env.sh).
+
+7.6 Подготовьте и выполните миграции. Старая таблица настроек вендорной версии constance требует
+однократного запуска вспомогательного скрипта перед миграциями Django (поддерживаются PostgreSQL и sqlite3):
+
+    djenv/bin/python scripts/migrate_constance_legacy.py
+    djenv/bin/python manage.py migrate
+
+Все настройки, измененные через интерфейс администратора, переносятся автоматически.
+
+7.7 Запустите сервисы и проверьте:
+
+    djenv/bin/python manage.py sopds_server start
+    djenv/bin/python manage.py sopds_scanner start
+
+    curl http://localhost:8001/opds/

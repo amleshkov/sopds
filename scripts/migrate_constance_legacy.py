@@ -11,25 +11,21 @@ from django.db import connection
 
 
 def main():
-    if connection.vendor != 'postgresql':
-        print('this helper is only needed for the legacy postgresql stand database')
+    if connection.vendor not in ('postgresql', 'sqlite'):
+        print('this helper only supports postgresql and sqlite, current vendor: %s' % connection.vendor)
         return
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            "select column_name from information_schema.columns where table_name = 'constance_config'"
-        )
-        columns = [row[0] for row in cursor.fetchall()]
+        tables = connection.introspection.table_names(cursor)
+        if 'constance_config' not in tables:
+            print('legacy constance_config table not found, nothing to do')
+            return
 
-    if not columns:
-        print('legacy constance_config table not found, nothing to do')
-        return
+        columns = [column.name for column in connection.introspection.get_table_description(cursor, 'constance_config')]
+        if 'id' in columns:
+            print('legacy constance_config already has id column, nothing to do')
+            return
 
-    if 'id' in columns:
-        print('legacy constance_config already has id column, nothing to do')
-        return
-
-    with connection.cursor() as cursor:
         cursor.execute('alter table constance_config add column id integer')
         cursor.execute(
             'update constance_config set id = sub.rn '

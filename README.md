@@ -332,3 +332,54 @@ an extraordinary scan of the collection will be launched, and the specified flag
 **SOPDS_CACHE_TIME** - Pages cache time
 (default is SOPDS_CACHE_TIME = 1200)
 
+
+#### 7. Upgrading from the original SimpleOPDS 0.47-devel
+
+The upgrade moves the project to Python 3.12 and Django 5.2 LTS. The database (books, authors,
+settings changed through the admin UI) is preserved.
+
+7.1 Stop the running services:
+
+    python3 manage.py sopds_server stop
+    python3 manage.py sopds_scanner stop
+
+If you used the Telegram bot (`sopds_telebot`), stop and remove its service as well — the bot
+and the fb2 to epub/mobi converters are no longer part of the project.
+
+7.2 Back up the database (mandatory):
+
+    pg_dump -U sopds sopds > sopds_backup.sql        # PostgreSQL
+    cp db.sqlite3 db.sqlite3.bak                     # sqlite3
+
+7.3 Update the project code (git pull or replace the directory).
+
+7.4 Build a new Python 3.12 environment and install the pinned dependencies
+(the old Python 3.9 environment is not compatible):
+
+    python3.12 -m venv djenv
+    djenv/bin/pip install -r requirements.txt
+
+7.5 Configure the application through environment variables (previously database credentials
+were edited directly in sopds/settings.py):
+
+    SOPDS_SECRET_KEY=<generate with: openssl rand -base64 50>   # required
+    SOPDS_DB_HOST=<host> SOPDS_DB_NAME=sopds SOPDS_DB_USER=sopds SOPDS_DB_PASSWORD=...   # PostgreSQL only
+    SOPDS_ALLOWED_HOSTS=<comma-separated host list>
+    SOPDS_DEBUG=True|False
+
+For systemd deployments add these variables to the EnvironmentFile (for example /opt/sopds/sopds-env.sh).
+
+7.6 Prepare and run the migrations. The old vendored constance settings table needs a one-time
+helper run before Django migrations convert it (works for PostgreSQL and sqlite3):
+
+    djenv/bin/python scripts/migrate_constance_legacy.py
+    djenv/bin/python manage.py migrate
+
+All settings changed through the admin interface are carried over automatically.
+
+7.7 Start the services and verify:
+
+    djenv/bin/python manage.py sopds_server start
+    djenv/bin/python manage.py sopds_scanner start
+
+    curl http://localhost:8001/opds/
