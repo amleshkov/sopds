@@ -1,28 +1,60 @@
 #### SimpleOPDS Catalog
 #### Author: Dmitry V.Shelepnev
-#### Version 0.47-devel
+#### Modernized fork: Python 3.12, Django 5.2 LTS
+
+OPDS catalog server for home book collections: scans a library directory
+(loose files and zip archives, INPX collections supported), serves the catalog
+through OPDS feeds and a web UI, runs scheduled rescans.
+
+- Stack: Python 3.12, Django 5.2 LTS, PostgreSQL (or sqlite3), gunicorn, WhiteNoise
+- Quality: 117 unit tests, docker-based e2e in CI (scan, API, web, byte-exact downloads), ruff-clean, coverage gate
+- Removed relative to the original 0.47: Telegram bot, fb2 to epub/mobi converters, vendored django-constance, vendored zipfile fork
 
 [Инструкция на русском языке: README_RUS.md](README_RUS.md)
 
-#### 1. Simple installation of SimpleOPDS (by using sqlite3 database)
+#### 1. Quick start (bare metal)
 
-1.1 Installing the project
-You can download the archive with the project from www.sopds.ru,
-or from github.com with the following command:
+1.1 Get the code and build the environment:
 
-	git clone https://github.com/mitshel/sopds.git
+    git clone <this repository> sopds
+    cd sopds
+    python3.12 -m venv djenv
+    djenv/bin/pip install -r requirements.txt
 
-1.2 Dependencies.
-- Reference environment: Python 3.12 (exact component versions are pinned in requirements.txt)
+1.2 Set environment variables (see section 2 for the full list). The minimum:
 
-All dependencies are installed with:
+    export SOPDS_SECRET_KEY="$(openssl rand -base64 50)"
+    export SOPDS_ALLOWED_HOSTS="localhost,your-host"
+    export SOPDS_DEBUG=True
 
-    yum install python3                            # setup command for RHEL, Fedora, CentOS
-    python3 -m pip install -r requirements.txt
+With `SOPDS_DEBUG=True` the development static-file serving is enabled;
+for production use gunicorn + WhiteNoise (systemd/docker below handle it).
 
-1.3 Environment variables
+1.3 Initialize the database (sqlite3 by default; PostgreSQL via `SOPDS_DB_HOST`):
 
-The application is configured through environment variables:
+    djenv/bin/python manage.py migrate
+    djenv/bin/python manage.py loaddata genre.json
+    djenv/bin/python manage.py createsuperuser
+
+1.4 Point the catalog at your library and rescan:
+
+    djenv/bin/python manage.py sopds_util setconf SOPDS_ROOT_LIB /path/to/books
+    djenv/bin/python manage.py sopds_scanner scan
+
+1.5 Start the server (gunicorn, foreground):
+
+    djenv/bin/python manage.py sopds_server start --host 0.0.0.0 --port 8001
+
+Access:
+
+>     OPDS feed: http://localhost:8001/opds/
+>     Web UI:    http://localhost:8001/web/
+>     Admin:     http://localhost:8001/admin/
+
+Enable authentication (`SOPDS_AUTH` constance setting) to require login
+(web) and HTTP Basic auth (OPDS) for the catalog.
+
+#### 2. Environment variables
 
     SOPDS_SECRET_KEY      required, Django secret key
     SOPDS_DEBUG           True/False, default False
@@ -32,306 +64,72 @@ The application is configured through environment variables:
     SOPDS_DB_USER         PostgreSQL user (default: sopds)
     SOPDS_DB_PASSWORD     PostgreSQL password (default: sopds)
     SOPDS_DB_PORT         PostgreSQL port (default: 5432)
+    SOPDS_STATIC_ROOT     collectstatic output directory (default: <project>/staticroot)
+    SOPDS_WEB_WORKERS     gunicorn worker count (default: 2)
 
-1.4 We initialize the database and fill in the initial data (genres)
+All other settings live in the database (django-constance) and are edited
+through the admin UI (`/admin/`) or `manage.py sopds_util setconf` — see section 5.
 
-	python3 manage.py migrate
-	python3 manage.py sopds_util clear
+#### 3. Docker
 
-1.5 Creating a Superuser
+    python scripts/make_testbooks.py testdata     # optional demo library
+    docker compose up -d --build
 
-	python3 manage.py createsuperuser
+Services: `postgres` (16), `sopds-server` (gunicorn, port 8001),
+`sopds-scanner` (scheduled rescans). The library directory is mounted at `/data`
+(set `SOPDS_LIB_DIR` to point at your collection).
 
-1.6 We adjust the path to your catalog with books and, if necessary, switch the interface language to English
+Run a one-off scan:
 
-	python3 manage.py sopds_util setconf SOPDS_ROOT_LIB 'Path to the directory with books'
-	python3 manage.py sopds_util setconf SOPDS_LANGUAGE en-EN
+    docker compose run --rm sopds-scanner scanner scan
 
-1.7 Launch the SCANNER server (optional, required for automated periodic re-scanning of the collection)
-    Please note that the default settings specify a periodic scan start 2 times a day 12:00 and 0:00.
+#### 4. systemd deployment
 
-	python3 manage.py sopds_scanner start --daemon
+`sopds_server start` runs gunicorn in the foreground — process management
+belongs to systemd (or docker). Ready unit files for the reference layout
+(project in `/opt/sopds/sopds`, venv in `/opt/sopds/djenv`, env vars in
+`/opt/sopds/sopds-env.sh`) are in `deploy/`:
 
-1.8 Starting the built-in HTTP / OPDS server
+    cp deploy/*.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now sopds.service sopds-scanner.service
 
-	python3 manage.py sopds_server start --daemon
+Units run `migrate` and `collectstatic` before start and restart on failure.
 
-However, the best way is still to configure the HTTP / OPDS servers as Apache or Nginx
-(entry point ./sopds/wsgi.py)
+#### 5. Catalog settings (django-constance)
 
-1.9 In order not to wait for the start of a scheduled scan, you can tell the sopds_scanner process about the need immediate scanning. You can do this by setting the configuration parameter SOPDS_SCAN_START_DIRECTLY = True two ways:
+Settings marked (constance) are stored in the database, editable via
+`/admin/` or:
 
-a) from the console using the command
+    python manage.py sopds_util setconf KEY VALUE
+    python manage.py sopds_util getconf [KEY]
 
-	python3 manage.py sopds_util setconf SOPDS_SCAN_START_DIRECTLY True
+Key settings:
 
-b) With the help of the Web-interface administration page http://<Your server>:8001/admin/
-   (FCONSTANCE -> Settings -> 1. General Options -> SOPDS_SCAN_START_DIRECTLY)
+**SOPDS_ROOT_LIB** - absolute path to the books collection directory.
+**SOPDS_AUTH** - require authentication for OPDS/web (default True).
+**SOPDS_LANGUAGE** - interface language, ru-RU or en-US.
+**SOPDS_BOOK_EXTENSIONS** - managed book file extensions (default ".pdf .djvu .fb2 .epub .mobi").
+**SOPDS_MAXITEMS** - items per page (default 60).
+**SOPDS_DOUBLES_HIDE** - hide duplicate books in listings (default True).
+**SOPDS_ZIPSCAN** - scan books inside zip archives (default True).
+**SOPDS_ZIPCODEPAGE** - codepage for filenames inside zip archives (default cp866).
+**SOPDS_INPX_ENABLE** - read metadata from .inpx collections (default False).
+**SOPDS_DELETE_LOGICAL** - mark missing books unavailable instead of deleting rows (default False).
+**SOPDS_SCAN_SHED_MIN/HOUR/DAY/DOW** - scanner cron schedule (constance).
+**SOPDS_SCAN_START_DIRECTLY** - set True to trigger an extra scan on the next scheduler check.
+**SOPDS_CACHE_TIME** - cover cache time in seconds (default 1200).
+**SOPDS_TITLE_AS_FILENAME** - build download filenames from book titles (default True).
 
-1.10 Access to information
-If all previous steps were successful, then the library can be accessed by the following URLs:
+#### 6. Console commands
 
->     OPDS-version: http://<Your server>:8001/opds/
->     HTTP-version: http://<Your server>:8001/
-
-It should be taken into account that by default the project uses a simple sqlite3 database, which
-is one-user. Therefore, until the scanning process is completed, the attempts to access the server may result in an error
-"A server error occurred." Please contact the administrator. "
-To eliminate this problem, you need to use multi-user databases, for example MYSQL.
-
-#### 2. Configuring the MySQL database (optional, but very desirable for increasing performance).
-2.1 To work with a large number of books, it is highly advisable not to use sqlite, but to configure MySQL databases to work. MySQL is much faster than sqlite. In addition, SQLite is a single-user database, i.e. during scanning access to a DB it will be impossible.
-
- To work with the Mysql database on different systems, you may need to install additional packages:
-
-    UBUNTU: sudo apt-get install python3-mysqldb
-    CENTOS-7: pip3 install mysqlclient
-
-Next, you must first create a database "sopds" and a user with the necessary rights in the MySQL database,
-for example, as follows:
-
-	mysql -uroot -proot_pass mysql
-	mysql> create database if not exists sopds default charset = utf8;
-	mysql> grant all on sopds. * to 'sopds' @ 'localhost' identified by 'sopds';
-	mysql> commit;
-	mysql> ^ C
-
-2.2 Then, in the configuration file, you need to comment out the connection strings to the sqlite database and uncomment the connection string to the Mysql database:
-
-
-	DATABASES = {
-	    'default': {
-	        'ENGINE': 'django.db.backends.mysql',
-	        'NAME': 'sopds',
-	        'HOST': 'localhost',
-	        'USER': 'sopds',
-	        'PASSWORD' : 'sopds',
-	        'OPTIONS' : {
-	            'init_command': "SET default_storage_engine=MyISAM;\
-	                             SET sql_mode='';"
-	        }
-	    }
-	}
-
-
-    # DATABASES = {
-    #    'default': {
-    #        'ENGINE': 'django.db.backends.sqlite3',
-    #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    #    }
-    #}
-
-
-2.4 Using InnoDB instead of MyISAM.
-The above MySQL configuration uses MyISAM as the database engine, which works on most versions of MySQL or MariaDB. However, if you use a relatively new version of Mysql (MariaDB> = 10.2.2, Mysql> = 5.7.9), then you can use the more modern InnoDB engine. It is somewhat faster and supports transactions, which will positively affect the integrity of the database. (On older versions of MySQL, there are problems with it because of restrictions on the maximum length of indexes.) Thus, if you have a modern version of MySQL (MariaDB> = 10.2.2, Mysql> = 5.7.9), then in the Mysql database settings, simply use the following instead of the above OPTIONS parameters:
-
-    'OPTIONS' : {
-        'init_command': """SET default_storage_engine=INNODB; \
-                           SET sql_mode='STRICT_TRANS_TABLES'; \
-                           SET NAMES UTF8 COLLATE utf8_general_ci; \
-                           SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED
-                        """
-    }
-
-2.5 Further it is necessary to re-execute points 1.3 - 1.8 of this instruction in order to initialize and fill the newly created database However, if you have already started the HTTP/OPDS server and the SCANNER server, you must first stop them:
-
-	python3 manage.py sopds_server stop
-	python3 manage.py sopds_scanner stop
-
-#### 3. Configuring the PostgreSQL database (optional, a good option for using the SimpleOPDS program).
-3.1 PostgreSQL is a good way to use SimpleOPDS.
-To use PostgreSQL, it is necessary to install this database and configure it (for a detailed description, see the Internet, for example: http://alexxkn.ru/node/42 or here: http://www.fight.org.ua/database/ install_posqgresql_ubuntu.html):
-
-
-    UBUNTU:
-    	sudo apt-get install postgresql postgresql-client postgresql-contrib libpq-dev
-    	sudo vi /etc/postgresql/9.5/main/pg_hba.conf
-    	sudo /etc/init.d/postgresql restart
-
-    CENTOS:
-      yum install postgresql postgresql-server
-	   /usr/bin/postgresql-setup initdb
-      vi /var/lib/pgsql/data/pg_hba.conf
-      systemctl enable postgresql
-      systemctl start postgresql
-
-editing the hba.conf file, you need to fix the following lines:
-
-    - local   all             all                                     peer
-    - host    all             all             127.0.0.1/32            ident
-    + local   all             all                                     md5
-    + host    all             all             127.0.0.1/32            md5
-
-
-To work with the PostgreSQL database, you probably need to install an additional package of psycopg2:
-
-    pip3 install psycopg2
-
-Next, you must first create a database "sopds" and a user with the necessary rights in the PostgreSQL database, for example, as follows:
-
-    psql -U postgres
-	 Password for user postgres: *****
-	 postgres=# create role sopds with password 'sopds' login;
-	 postgres=# create database sopds with owner sopds;
-	 postgres=# \q
-
-3.2 Next in the configuration file, you need to comment out the connection strings to the sqlite database and decompress it accordingly the connection string to the PostgreSQL database:
-
-	 DATABASES = {
-	    'default': {
-	    'ENGINE': 'django.db.backends.postgresql_psycopg2',
-	    'NAME': 'sopds',
-	    'USER': 'sopds',
-	    'PASSWORD': 'sopds',
-	    'HOST': '', # Set to empty string for localhost.
-	    'PORT': '', # Set to empty string for default.
-	    }
-	 }
-
-
-     # DATABASES = {
-     #    'default': {
-     #        'ENGINE': 'django.db.backends.sqlite3',
-     #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-     #    }
-     #}
-
-3.4 Next, it is necessary to re-execute points 1.3 - 1.8 of this instruction in order to initialize and fill the newly created database However, if you have already started the HTTP/OPDS server and the SCANNER server, you must first stop them:
-
-	 python3 manage.py sopds_server stop
-	 python3 manage.py sopds_scanner stop
-
-#### 4. Console commands Simple OPDS
-
-Show information about the book collection:
-
-    python3 manage.py sopds_util info
-
-Clear the database with a collection of books, download the genre directory:
-
-    python3 manage.py sopds_util clear [--verbose]
-
-Keep your genre directory in the file opds_catalog / fixtures / mygenres.json:
-
-    python3 manage.py sopds_util save_mygenres
-
-Download your genre directory from the opds_catalog/fixtures/mygenres.json file:
-
-    python3 manage.py sopds_util load_mygenres
-
-Only when using PostgerSQL. Optimization of the table opds_catalog_book (fillfactor = 50). After that, scanning is much faster:
-
-    python3 manage.py sopds_util pg_optimize
-
-View all configuration options:
-
-    python3 manage.py sopds_util getconf
-
-View the value of a specific configuration parameter:
-
-    python3 manage.py sopds_util getconf SOPDS_ROOT_LIB
-
-Set the value of a specific configuration parameter:
-
-    python3 manage.py sopds_util setconf SOPDS_ROOT_LIB '\home\files\books'
-
-Start a one-time scan of the book collection:
-
-    python3 manage.py sopds_scanner scan [--verbose] [--daemon]
-
-Run the scan of the collection of books on a schedule:
-
-    python3 manage.py sopds_scanner start [--verbose] [--daemon]
-
-Run the embedded web server:
-
-    python3 manage.py sopds_server start [--host <IP address>] [--port <port N>] [--daemon]
-
-
-#### 6. Options of the cataloger Simple OPDS (www.sopds.ru)  
-The Simple OPDS cataloger has additional settings that can be changed using the admin interface http://<Your server>/admin/  
-
-**SOPDS_LANGUAGE** - change the interface language.  
-
-**SOPDS_ROOT_LIB** - contains the path to the directory where your book collection is located.  
-
-**SOPDS_BOOK_EXTENSIONS** - List of book formats that will be included in the catalog.  
-(by default SOPDS_BOOK_EXTENSIONS = '.pdf .djvu .fb2 .epub')  
-
-**SOPDS_DOUBLES_HIDE** - Hides found duplicates in book issues.  
-(by default SOPDS_DOUBLES_HIDE = True)  
-
-**SOPDS_FB2SAX** - The program can extract metadata from FB2 by two parsers
-  - FB2sax is the regular parser used in SOPDS from version 0.01, this parser is faster, and retrieves metadata even from invalid FB2 files  
-  - FB2xpath - appeared in version 0.42, works less often, does not tolerate invalid FB2  
-(by default SOPDS_FB2SAX = True)  
-
-**SOPDS_COVER_SHOW** - a way to show skins (False - do not show, True - extract covers on the fly and show).  
-(by default SOPDS COVER_SHOW = True)  
-
-**SOPDS_ZIPSCAN** - Configures the scanning of ZIP archives.  
-(by default SOPDS_ZIPSCAN = True)  
-
-**SOPDS_ZIPCODEPAGE** - Specify which encoding for file names is used in ZIP archives. Available encodings: cp437, cp866, cp1251, utf-8. The default encoding is cp437. Since there is no information about the encoding in which the file names are located in the ZIP archive, it is not possible to automatically determine the correct encoding for filenames, so cyrillic encodings should use cp866 encoding in order for Cyrillic file names to not look like croaks.  
-(default is SOPDS_ZIPCODEPAGE = "cp866")  
-
-**SOPDS_INPX_ENABLE** - If True, if an INPX file is found in the directory, the scanner does not scan its contents with the sub-htag, but loads the data from the found INPX file. The scanner believes that the archives of books themselves are located in the same directory. Those. INPX-file should be located in the folder with the archives of books.
-However, please note that using data from INPX will result in the absence of annotation in the library. INPX annotations are not present !!!  
-(by default SOPDS_INPX_ENABLE = True)  
-
-**SOPDS_INPX_SKIP_UNCHANGED** - If True, the scanner skips re-scanning if the size of INPX has not changed.  
-(by default SOPDS_INPX_SKIP_UNCHANGED = True)  
-
-**SOPDS_INPX_TEST_ZIP** - If True, the scanner tries to find the archive described in the INPX. If an archive is not found, the scanner will not add the data from INPX connected to it to the database, if SOPDS_INPX_TEST_ZIP = False, then the scanner does not perform any checks, but simply adds data from INPX to the database. It's much faster.  
-(by default SOPDS_INPX_TEST_ZIP = False)  
-
-**SOPDS_INPX_TEST_FILES** - If True, the scanner tries to find the specific file with the book described in INPX (already inside the archives). If a file is not found, the scanner will not add this book to the database, if INPX_TEST_FILES = False, then the scanner does not perform any checks, but simply adds a book from INPX to the database. It's much faster.  
-(by default SOPDS_TEST_FILES = False)  
-
-**SOPDS_DELETE_LOGICAL** - True will result in the fact that if the scanner detects that the book has been deleted, the entry in the database about this book will be deleted logically (avail = 0). If the value is False, then there will be a physical deletion of such records from the database. So far only SOPDS_DELETE_LOGICAL = False.  
-(by default SOPDS_DELETE_LOGICAL = False)  
-
-**SOPDS_SPLITITEMS** - Sets when the number of elements in the group is reached - the group will "expand". For issuing "By Title", "By Authors", "By Series".  
-(the default is SOPDS_SPLITITEMS = 300)  
-
-**SOPDS_MAXITEMS** - The number of results to be displayed per page.  
-(the default is SOPDS_MAXITEMS = 60)  
-
-**SOPDS_TITLE_AS_FILENAME** - If True, when downloading instead of the original file name, the book will produce a transliteration of the title of the book.  
-(by default SOPDS_TITLE_AS_FILENAME = True)  
-
-**SOPDS_ALPHABET_MENU** - Includes an additional menu for selecting the alphabet.  
-(by default SOPDS_ALPHABET_MENU = True)  
-
-**SOPDS_NOCOVER_PATH** - A cover file that will be displayed for books without covers.  
-(by default SOPDS_NOCOVER_PATH = os.path.join (BASE_DIR, 'static/images/nocover.jpg'))  
-
-**SOPDS_AUTH** - Enable BASIC - authorization.  
-(by default SOPDS_AUTH = True)  
-
-**SOPDS_SERVER_LOG** and **SOPDS_SCANNER_LOG** specify the location of LOG files of these processes.  
-(by default SOPDS_SERVER_LOG = os.path.join (BASE_DIR, 'opds_catalog/log/sopds_server.log'))  
-(by default SOPDS_SCANNER_LOG = os.path.join (BASE_DIR, 'opds_catalog/log/sopds_scanner.log'))  
-
-**SOPDS_SERVER_PID** and **SOPDS_SCANNER_PID** specify the location of the PID files of these processes during demonization.  
-(by default SOPDS_SERVER_PID = os.path.join (BASE_DIR, 'opds_catalog/tmp/sopds_server.pid'))  
-(by default SOPDS_SCANNER_PID = os.path.join (BASE_DIR, 'opds_catalog/tmp/ sopds_scanner.pid'))  
-
-Parameters **SOPDS_SCAN_SHED_XXX** set the values ​​of the template, to periodically scan the collection of books using ** manage.py sopds_scanner start **. Possible values ​​can be found on the following page: # https://apscheduler.readthedocs.io/en/latest/modules/triggers/cron.html#module-apscheduler.triggers.cron  
-Changes to the following parameters via the Web interface or the command line are checked by the sopds_scanner process every 10 minutes.  
-In case of detection of changes, sopds_scanner automatically makes the appropriate changes to the scheduler.  
-
-(default is SOPDS_SCAN_SHED_MIN = '0')  
-(the default is SOPDS_SCAN_SHED_HOUR = '0,12')  
-(default is SOPDS_SCAN_SHED_DAY = '*')  
-(default is SOPDS_SCAN_SHED_DOW = '*')  
-
-**SOPDS_SCAN_START_DIRECTLY** - setting this parameter to True will cause the next check of the sopds_scanner flag (every 10 minutes)  
-an extraordinary scan of the collection will be launched, and the specified flag will again be reset to False.  
-
-**SOPDS_CACHE_TIME** - Pages cache time
-(default is SOPDS_CACHE_TIME = 1200)
-
+    python manage.py sopds_scanner scan              # one full scan
+    python manage.py sopds_scanner start             # scheduled scans (cron from settings)
+    python manage.py sopds_util info                 # collection statistics
+    python manage.py sopds_util clear [--nogenres]   # wipe catalog (reloads genres by default)
+    python manage.py sopds_util save_mygenres        # dump current genres to fixtures
+    python manage.py sopds_util load_mygenres        # load genres from fixtures
+    python manage.py sopds_util pg_optimize          # PostgreSQL table optimization
 
 #### 7. Upgrading from the original SimpleOPDS 0.47-devel
 
@@ -384,19 +182,13 @@ All settings changed through the admin interface are carried over automatically.
 
     curl http://localhost:8001/opds/
 
-#### 8. Running under systemd with gunicorn
+#### 8. Development
 
-`sopds_server start` runs the application with gunicorn in the foreground
-(worker count is taken from the `SOPDS_WEB_WORKERS` environment variable, default 2).
-Static files are served by WhiteNoise from the `collectstatic` output directory
-(`SOPDS_STATIC_ROOT`, default `<project>/staticroot`).
+    pip install -r requirements.txt -r requirements-dev.txt
+    python manage.py test                          # unit tests
+    coverage run manage.py test && coverage report # coverage (gate: 72%)
+    ruff check .                                   # linter
+    docker compose up -d --build && docker compose run --rm sopds-scanner scanner scan   # e2e locally
 
-Ready-to-use unit files are located in the `deploy/` directory
-(`sopds.service`, `sopds-scanner.service`). They expect the layout of the reference
-installation: project in `/opt/sopds/sopds`, virtualenv in `/opt/sopds/djenv`,
-environment variables in `/opt/sopds/sopds-env.sh` (including `SOPDS_SECRET_KEY`).
-Adjust the paths for your installation and then:
-
-    cp deploy/*.service /etc/systemd/system/
-    systemctl daemon-reload
-    systemctl enable --now sopds.service sopds-scanner.service
+CI (GitHub Actions): lint (ruff), unit tests with coverage gate,
+docker e2e (generated demo library, scan, OPDS/web checks, byte-exact downloads).
