@@ -46,7 +46,8 @@ jobs:
           [ "$COUNT" -eq 6 ]
 
       - name: Check OPDS main feed
-        run: curl -sf http://localhost:8001/opds/ | grep -q 'books: 6'
+        run: |
+          curl -sf http://localhost:8001/opds/ | grep -q 'books: 6'
 
       - name: Check OPDS search and download of a loose book
         run: |
