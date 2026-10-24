@@ -12,6 +12,11 @@ from django.utils.html import strip_tags
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 
+try:
+    from django.utils.http import url_has_allowed_host_and_scheme
+except ImportError:
+    from django.utils.http import is_safe_url as url_has_allowed_host_and_scheme
+
 from opds_catalog import models
 from opds_catalog.models import Book, Author, Series, bookshelf, Counter, Catalog, Genre, lang_menu
 from opds_catalog import settings
@@ -566,7 +571,9 @@ def LoginView(request):
     except KeyError:
         return render(request, 'sopds_login.html', args)
     
-    next_url = request.GET.get('next',reverse("web:main"))
+    next_url = request.GET.get('next', '')
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        next_url = reverse("web:main")
 
     user = authenticate(username=username, password=password)
     if user is not None:
