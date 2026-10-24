@@ -1,4 +1,6 @@
 import base64
+from functools import wraps
+
 from django.http import HttpResponse
 from django.contrib import auth
 from django.utils import translation
@@ -6,6 +8,17 @@ from django.middleware.cache import FetchFromCacheMiddleware as DjangoFetchFromC
 from django.utils.deprecation import MiddlewareMixin
 
 from constance import config
+
+
+def sopds_auth_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if config.SOPDS_AUTH and not request.user.is_authenticated:
+            result = BasicAuthMiddleware().process_request(request)
+            if result is not None:
+                return result
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
 class BasicAuthMiddleware(object):

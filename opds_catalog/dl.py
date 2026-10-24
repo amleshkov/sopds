@@ -10,6 +10,7 @@ from django.views.decorators.cache import cache_page
 
 from opds_catalog.models import Book, bookshelf
 from opds_catalog import settings, utils, opdsdb, fb2parse
+from opds_catalog.middleware import sopds_auth_required
 import opds_catalog.zipf as zipfile
 
 from book_tools.format import create_bookfile, mime_detector
@@ -27,6 +28,7 @@ def getFileName(book):
     return utils.to_ascii(transname)
 
 
+@sopds_auth_required
 def Download(request, book_id, zip_flag):
     """ Загрузка файла книги """
     book = Book.objects.get(id=book_id)
@@ -103,6 +105,7 @@ def Download(request, book_id, zip_flag):
     return response
 
 # Новая версия (0.42) процедуры извлечения обложек из файлов книг fb2, epub, mobi
+@sopds_auth_required
 @cache_page(config.SOPDS_CACHE_TIME)
 def Cover(request, book_id, thumbnail=False):
     """ Загрузка обложки """
@@ -218,5 +221,6 @@ def Cover0(request, book_id, thumbnail = False):
 
     return response
 
+@sopds_auth_required
 def Thumbnail(request, book_id):
     return Cover(request, book_id, True)
