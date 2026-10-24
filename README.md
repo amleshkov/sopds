@@ -13,7 +13,7 @@ or from github.com with the following command:
 	git clone https://github.com/mitshel/sopds.git
 
 1.2 Dependencies.
-- Reference environment: Python 3.9 (exact component versions are pinned in requirements.txt)
+- Reference environment: Python 3.12 (exact component versions are pinned in requirements.txt)
 
 All dependencies are installed with:
 
