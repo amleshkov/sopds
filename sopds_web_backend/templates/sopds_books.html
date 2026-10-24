@@ -4,7 +4,7 @@
 {% block body %}
 <script>
        function del_bsbook(b_id, b_t) {
-           $('#DeleteBook_btnYes').attr("href","{% url "web:bsdel" %}?book="+b_id);
+           $('#DeleteBook_book').val(b_id);
            $('#DeleteBook_image').attr("src","{% url "opds:covertmpl" %}"+b_id+"/");
            $('#DeleteBook_title').text(b_t);
            $('#DeleteBookModal').foundation('open');
@@ -22,7 +22,12 @@
   </td>
   </tr>
   </table>
-  <p class="text-center"><a href="#" class="secondary button" id="DeleteBook_btnYes">{% trans "Delete" %}</a>
+  <p class="text-center">
+  <form method="post" action="{% url 'web:bsdel' %}" style="display:inline-block; margin:0;">
+    {% csrf_token %}
+    <input type="hidden" name="book" id="DeleteBook_book" value="">
+    <button type="submit" class="secondary button" id="DeleteBook_btnYes">{% trans "Delete" %}</button>
+  </form>
                          &nbsp;&nbsp;&nbsp;<a class="close button" data-close>{% trans "Cancel" %}</a></p>
   <button class="close-button" data-close aria-label="Close modal" type="button">
     <span aria-hidden="true">&times;</span>
@@ -33,7 +38,11 @@
  <div id="ConfirmModal" class="reveal tiny text-center" data-reveal>
   <h5 id="ConfirmModalTitle">{% trans "Confirm to clear your bookshelf." %}</h5>
   <p></p>
-  <p class="text-center"><a href="{% url "web:bsclear" %}" class="secondary button" id="Confirm_btnYes">{% trans "Clear" %}</a>
+  <p class="text-center">
+  <form method="post" action="{% url 'web:bsclear' %}" style="display:inline-block; margin:0;">
+    {% csrf_token %}
+    <button type="submit" class="secondary button" id="Confirm_btnYes">{% trans "Clear" %}</button>
+  </form>
                          &nbsp;&nbsp;&nbsp;<a class="close button" data-close>{% trans "Cancel" %}</a></p>
   <button class="close-button" data-close aria-label="Close modal" type="button">
     <span aria-hidden="true">&times;</span>

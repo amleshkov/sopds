@@ -10,7 +10,8 @@ from django.views.decorators.vary import vary_on_headers
 from django.urls import reverse, reverse_lazy
 from django.utils.html import strip_tags
 from django.db.models import Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponseBadRequest
+from django.views.decorators.http import require_POST
 
 try:
     from django.utils.http import url_has_allowed_host_and_scheme
@@ -538,20 +539,20 @@ def GenresView(request):
 
 @vary_on_headers("HTTP_ACCEPT_LANGUAGE")
 @sopds_login(url='web:login')
+@require_POST
 def BSDelView(request):
-    if request.GET:
-        book = request.GET.get('book', None)
-    else:
-        book = None
-       
-    book = int(book)
-       
+    try:
+        book = int(request.POST.get('book', ''))
+    except ValueError:
+        return HttpResponseBadRequest('invalid book id')
+
     bookshelf.objects.filter(user=request.user, book=book).delete()
-    
+
     return redirect("%s?searchtype=u"%reverse("web:searchbooks"))
 
 @vary_on_headers("HTTP_ACCEPT_LANGUAGE")
 @sopds_login(url='web:login')
+@require_POST
 def BSClearView(request):
     bookshelf.objects.filter(user=request.user).delete()
     return redirect("%s?searchtype=u" % reverse("web:searchbooks"))

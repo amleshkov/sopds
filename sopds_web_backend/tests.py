@@ -8,6 +8,8 @@ from django.contrib.auth.models import User
 
 from constance import config
 
+from opds_catalog.models import Book, bookshelf
+
 
 class LoginRedirectTestCase(TestCase):
 
@@ -51,3 +53,49 @@ class LoginRedirectTestCase(TestCase):
             {'username': 'tester', 'password': 'wrong'},
         )
         self.assertEqual(response.status_code, 403)
+
+
+class BookshelfMutationTestCase(TestCase):
+    fixtures = ['testdb.json']
+
+    def setUp(self):
+        config.SOPDS_AUTH = True
+        self.user = User.objects.create_user('tester', password='secret123')
+        bookshelf.objects.create(user=self.user, book=Book.objects.get(id=5))
+        self.c = Client()
+        self.c.force_login(self.user)
+
+    def shelf_count(self):
+        return bookshelf.objects.filter(user=self.user).count()
+
+    def test_delete_via_get_rejected(self):
+        response = self.c.get(reverse('web:bsdel'), {'book': 5})
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(self.shelf_count(), 1)
+
+    def test_delete_via_post_works(self):
+        response = self.c.post(reverse('web:bsdel'), {'book': 5})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.shelf_count(), 0)
+
+    def test_delete_invalid_book_param(self):
+        response = self.c.post(reverse('web:bsdel'), {'book': 'abc'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.shelf_count(), 1)
+
+    def test_delete_requires_csrf_token(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        response = csrf_client.post(reverse('web:bsdel'), {'book': 5})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.shelf_count(), 1)
+
+    def test_clear_via_get_rejected(self):
+        response = self.c.get(reverse('web:bsclear'))
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(self.shelf_count(), 1)
+
+    def test_clear_via_post_works(self):
+        response = self.c.post(reverse('web:bsclear'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.shelf_count(), 0)
