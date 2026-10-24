@@ -1,0 +1,8 @@
+[run]
+source = opds_catalog, sopds, sopds_web_backend, book_tools, scripts
+omit =
+    */migrations/*
+    */tests/*
+
+[report]
+show_missing = false
