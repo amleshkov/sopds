@@ -23,7 +23,7 @@ jobs:
       - name: Run linter
         run: ruff check .
 
-  unit tests:
+  unittests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
       - name: Run tests
         run: python manage.py test
 
-  e2e test:
+  e2e_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
