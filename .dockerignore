@@ -10,3 +10,4 @@ opds_catalog/log
 opds_catalog/tmp
 REFACTORING_PLAN.md
 staticroot
+.venv

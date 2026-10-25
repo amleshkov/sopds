@@ -13,45 +13,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.12'
-
-      - name: Install ruff
-        run: pip install -r requirements-dev.txt
+          version: "0.13.5"
+          enable-cache: true
 
       - name: Run linter
-        run: ruff check .
+        run: |
+          uv sync --frozen --no-install-project
+          uv run ruff check .
 
   unittests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.12'
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-dev.txt
+          version: "0.13.5"
+          enable-cache: true
 
       - name: Run tests with coverage
         run: |
-          coverage run manage.py test
-          coverage report -m --fail-under=72
+          uv sync --frozen --no-install-project
+          uv run coverage run manage.py test
+          uv run coverage report -m --fail-under=72
 
   e2e_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.12'
+          version: "0.13.5"
 
       - name: Generate test library
-        run: python scripts/make_testbooks.py testdata
+        run: uv run --no-project python scripts/make_testbooks.py testdata
 
       - name: Build image and start postgres and server
         run: docker compose up -d --build postgres sopds-server

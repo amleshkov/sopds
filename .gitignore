@@ -11,3 +11,4 @@ testdata/
 
 staticroot/
 *.coverage
+.venv

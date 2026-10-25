@@ -14,12 +14,11 @@ through OPDS feeds and a web UI, runs scheduled rescans.
 
 #### 1. Quick start (bare metal)
 
-1.1 Get the code and build the environment:
+1.1 Get the code and build the environment (requires [uv](https://docs.astral.sh/uv/)):
 
     git clone <this repository> sopds
     cd sopds
-    python3.12 -m venv djenv
-    djenv/bin/pip install -r requirements.txt
+    uv sync
 
 1.2 Set environment variables (see section 2 for the full list). The minimum:
 
@@ -32,18 +31,18 @@ for production use gunicorn + WhiteNoise (systemd/docker below handle it).
 
 1.3 Initialize the database (sqlite3 by default; PostgreSQL via `SOPDS_DB_HOST`):
 
-    djenv/bin/python manage.py migrate
-    djenv/bin/python manage.py loaddata genre.json
-    djenv/bin/python manage.py createsuperuser
+    uv run manage.py migrate
+    uv run manage.py loaddata genre.json
+    uv run manage.py createsuperuser
 
 1.4 Point the catalog at your library and rescan:
 
-    djenv/bin/python manage.py sopds_util setconf SOPDS_ROOT_LIB /path/to/books
-    djenv/bin/python manage.py sopds_scanner scan
+    uv run manage.py sopds_util setconf SOPDS_ROOT_LIB /path/to/books
+    uv run manage.py sopds_scanner scan
 
 1.5 Start the server (gunicorn, foreground):
 
-    djenv/bin/python manage.py sopds_server start --host 0.0.0.0 --port 8001
+    uv run manage.py sopds_server start --host 0.0.0.0 --port 8001
 
 Access:
 
@@ -87,7 +86,7 @@ Run a one-off scan:
 
 `sopds_server start` runs gunicorn in the foreground — process management
 belongs to systemd (or docker). Ready unit files for the reference layout
-(project in `/opt/sopds/sopds`, venv in `/opt/sopds/djenv`, env vars in
+(project in `/opt/sopds/sopds`, uv-managed venv in `/opt/sopds/sopds/.venv`, env vars in
 `/opt/sopds/sopds-env.sh`) are in `deploy/`:
 
     cp deploy/*.service /etc/systemd/system/
@@ -151,11 +150,10 @@ and the fb2 to epub/mobi converters are no longer part of the project.
 
 7.3 Update the project code (git pull or replace the directory).
 
-7.4 Build a new Python 3.12 environment and install the pinned dependencies
-(the old Python 3.9 environment is not compatible):
+7.4 Build a new Python 3.12 environment with uv (the old Python 3.9 environment
+is not compatible):
 
-    python3.12 -m venv djenv
-    djenv/bin/pip install -r requirements.txt
+    uv sync
 
 7.5 Configure the application through environment variables (previously database credentials
 were edited directly in sopds/settings.py):
@@ -170,24 +168,24 @@ For systemd deployments add these variables to the EnvironmentFile (for example 
 7.6 Prepare and run the migrations. The old vendored constance settings table needs a one-time
 helper run before Django migrations convert it (works for PostgreSQL and sqlite3):
 
-    djenv/bin/python scripts/migrate_constance_legacy.py
-    djenv/bin/python manage.py migrate
+    uv run python scripts/migrate_constance_legacy.py
+    uv run manage.py migrate
 
 All settings changed through the admin interface are carried over automatically.
 
 7.7 Start the services and verify:
 
-    djenv/bin/python manage.py sopds_server start
-    djenv/bin/python manage.py sopds_scanner start
+    uv run manage.py sopds_server start
+    uv run manage.py sopds_scanner start
 
     curl http://localhost:8001/opds/
 
 #### 8. Development
 
-    pip install -r requirements.txt -r requirements-dev.txt
-    python manage.py test                          # unit tests
-    coverage run manage.py test && coverage report # coverage (gate: 72%)
-    ruff check .                                   # linter
+    uv sync                                        # includes the dev group
+    uv run manage.py test                          # unit tests
+    uv run coverage run manage.py test && uv run coverage report   # coverage (gate: 72%)
+    uv run ruff check .                            # linter
     docker compose up -d --build && docker compose run --rm sopds-scanner scanner scan   # e2e locally
 
 CI (GitHub Actions): lint (ruff), unit tests with coverage gate,

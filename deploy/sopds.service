@@ -8,9 +8,9 @@ Type=simple
 EnvironmentFile=/opt/sopds/sopds-env.sh
 User=sopds
 WorkingDirectory=/opt/sopds/sopds
-ExecStartPre=/opt/sopds/djenv/bin/python manage.py migrate --noinput
-ExecStartPre=/opt/sopds/djenv/bin/python manage.py collectstatic --noinput
-ExecStart=/opt/sopds/djenv/bin/python manage.py sopds_server start --host 0.0.0.0 --port 8001
+ExecStartPre=/opt/sopds/sopds/.venv/bin/python manage.py migrate --noinput
+ExecStartPre=/opt/sopds/sopds/.venv/bin/python manage.py collectstatic --noinput
+ExecStart=/opt/sopds/sopds/.venv/bin/python manage.py sopds_server start --host 0.0.0.0 --port 8001
 Restart=on-failure
 RestartSec=5
 

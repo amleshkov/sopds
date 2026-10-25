@@ -8,7 +8,7 @@ Type=simple
 EnvironmentFile=/opt/sopds/sopds-env.sh
 User=sopds
 WorkingDirectory=/opt/sopds/sopds
-ExecStart=/opt/sopds/djenv/bin/python manage.py sopds_scanner start
+ExecStart=/opt/sopds/sopds/.venv/bin/python manage.py sopds_scanner start
 Restart=on-failure
 RestartSec=5
 

@@ -14,12 +14,11 @@ OPDS-фиды и веб-интерфейс, выполняет регулярн�
 
 #### 1. Быстрый старт (без docker)
 
-1.1 Получите код и соберите окружение:
+1.1 Получите код и соберите окружение (требуется [uv](https://docs.astral.sh/uv/)):
 
     git clone <этот репозиторий> sopds
     cd sopds
-    python3.12 -m venv djenv
-    djenv/bin/pip install -r requirements.txt
+    uv sync
 
 1.2 Задайте переменные окружения (полный список в разделе 2). Минимум:
 
@@ -32,18 +31,18 @@ OPDS-фиды и веб-интерфейс, выполняет регулярн�
 
 1.3 Инициализируйте базу (по умолчанию sqlite3; PostgreSQL — через `SOPDS_DB_HOST`):
 
-    djenv/bin/python manage.py migrate
-    djenv/bin/python manage.py loaddata genre.json
-    djenv/bin/python manage.py createsuperuser
+    uv run manage.py migrate
+    uv run manage.py loaddata genre.json
+    uv run manage.py createsuperuser
 
 1.4 Укажите путь к библиотеке и просканируйте ее:
 
-    djenv/bin/python manage.py sopds_util setconf SOPDS_ROOT_LIB /путь/к/книгам
-    djenv/bin/python manage.py sopds_scanner scan
+    uv run manage.py sopds_util setconf SOPDS_ROOT_LIB /путь/к/книгам
+    uv run manage.py sopds_scanner scan
 
 1.5 Запустите сервер (gunicorn, в foreground-режиме):
 
-    djenv/bin/python manage.py sopds_server start --host 0.0.0.0 --port 8001
+    uv run manage.py sopds_server start --host 0.0.0.0 --port 8001
 
 Доступ:
 
@@ -87,7 +86,7 @@ OPDS-фиды и веб-интерфейс, выполняет регулярн�
 
 `sopds_server start` запускает gunicorn в foreground-режиме — управлением процессом
 занимается systemd (или docker). Готовые юнит-файлы для эталонного layout
-(проект в `/opt/sopds/sopds`, окружение в `/opt/sopds/djenv`, переменные в
+(проект в `/opt/sopds/sopds`, uv-окружение в `/opt/sopds/sopds/.venv`, переменные в
 `/opt/sopds/sopds-env.sh`) лежат в `deploy/`:
 
     cp deploy/*.service /etc/systemd/system/
@@ -150,11 +149,10 @@ OPDS-фиды и веб-интерфейс, выполняет регулярн�
 
 7.3 Обновите код проекта (git pull или замените каталог).
 
-7.4 Создайте новое окружение Python 3.12 и установите зафиксированные зависимости
+7.4 Соберите новое окружение Python 3.12 с помощью uv
 (старое окружение Python 3.9 несовместимо):
 
-    python3.12 -m venv djenv
-    djenv/bin/pip install -r requirements.txt
+    uv sync
 
 7.5 Настройте приложение через переменные окружения (ранее параметры БД правились
 напрямую в файле sopds/settings.py):
@@ -169,24 +167,24 @@ OPDS-фиды и веб-интерфейс, выполняет регулярн�
 7.6 Подготовьте и выполните миграции. Старая таблица настроек вендорной версии constance требует
 однократного запуска вспомогательного скрипта перед миграциями Django (поддерживаются PostgreSQL и sqlite3):
 
-    djenv/bin/python scripts/migrate_constance_legacy.py
-    djenv/bin/python manage.py migrate
+    uv run python scripts/migrate_constance_legacy.py
+    uv run manage.py migrate
 
 Все настройки, измененные через интерфейс администратора, переносятся автоматически.
 
 7.7 Запустите сервисы и проверьте:
 
-    djenv/bin/python manage.py sopds_server start
-    djenv/bin/python manage.py sopds_scanner start
+    uv run manage.py sopds_server start
+    uv run manage.py sopds_scanner start
 
     curl http://localhost:8001/opds/
 
 #### 8. Разработка
 
-    pip install -r requirements.txt -r requirements-dev.txt
-    python manage.py test                          # юнит-тесты
-    coverage run manage.py test && coverage report # покрытие (гейт: 72%)
-    ruff check .                                   # линтер
+    uv sync                                        # включая dev-группу
+    uv run manage.py test                          # юнит-тесты
+    uv run coverage run manage.py test && uv run coverage report   # покрытие (гейт: 72%)
+    uv run ruff check .                            # линтер
     docker compose up -d --build && docker compose run --rm sopds-scanner scanner scan   # e2e локально
 
 CI (GitHub Actions): линтер (ruff), юнит-тесты с гейтом покрытия,
