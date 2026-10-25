@@ -7,13 +7,13 @@ import re
 import time
 from functools import partial
 
+from constance import config
 from django.db import transaction
 from django.utils.translation import gettext as _
 
 import opds_catalog.zipf as zipfile
 from book_tools.format import create_bookfile
 from book_tools.format.util import strip_symbols
-from constance import config
 from opds_catalog import inpx_parser, opdsdb
 
 BATCH_SIZE = 100

@@ -4,9 +4,9 @@ import os
 import tempfile
 import zipfile
 
+from constance import config
 from django.test import TestCase
 
-from constance import config
 from opds_catalog.models import Book, Catalog
 from opds_catalog.sopdscan import opdsScanner
 

@@ -5,6 +5,7 @@ import logging
 import os
 from functools import wraps
 
+from constance import config
 from django.http import FileResponse, Http404, HttpResponse
 from django.views.decorators.cache import cache_page
 from PIL import Image
@@ -12,7 +13,6 @@ from PIL import Image
 import opds_catalog.zipf as zipfile
 from book_tools.format import create_bookfile, mime_detector
 from book_tools.format.mimetype import Mimetype
-from constance import config
 from opds_catalog import opdsdb, settings, utils
 from opds_catalog.middleware import sopds_auth_required
 from opds_catalog.models import Book, bookshelf

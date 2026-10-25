@@ -3,9 +3,9 @@
 import io
 import zipfile as stdlib_zipfile
 
+from constance import config
 from django.test import TestCase
 
-from constance import config
 from opds_catalog import zipf
 
 

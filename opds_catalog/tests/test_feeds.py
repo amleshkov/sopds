@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from constance import config
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from constance import config
 from opds_catalog import opdsdb
 
 

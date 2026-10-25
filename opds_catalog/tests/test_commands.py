@@ -3,11 +3,11 @@ import os
 from io import StringIO
 from unittest import mock
 
+from constance import config
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-from constance import config
 from opds_catalog.models import Book, Genre
 
 

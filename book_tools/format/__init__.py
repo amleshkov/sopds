@@ -3,11 +3,12 @@ import zipfile
 from io import BytesIO
 from xml import sax
 
+from constance import config
+
 from book_tools.format.fb2 import FB2, FB2Zip
 from book_tools.format.fb2sax import FB2sax
 from book_tools.format.mimetype import Mimetype
 from book_tools.format.util import list_zip_file_infos
-from constance import config
 
 
 class mime_detector:

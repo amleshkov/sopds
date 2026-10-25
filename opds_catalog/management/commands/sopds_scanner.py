@@ -4,11 +4,10 @@ import signal
 import sys
 
 from apscheduler.schedulers.blocking import BlockingScheduler
+from constance import config
 from django.conf import settings as main_settings
 from django.core.management.base import BaseCommand
 from django.db import connection, connections
-
-from constance import config
 
 #from opds_catalog.settings import SCANNER_LOG, SCAN_SHED_DAY, SCAN_SHED_DOW, SCAN_SHED_HOUR, SCAN_SHED_MIN, LOGLEVEL, SCANNER_PID
 from opds_catalog import settings

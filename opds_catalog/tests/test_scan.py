@@ -2,9 +2,9 @@ import os
 import shutil
 import tempfile
 
+from constance import config
 from django.test import TestCase
 
-from constance import config
 from opds_catalog import opdsdb
 
 #from opds_catalog import settings

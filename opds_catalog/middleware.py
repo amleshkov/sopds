@@ -2,12 +2,11 @@ import base64
 import binascii
 from functools import wraps
 
+from constance import config
 from django.contrib import auth
 from django.http import HttpResponse
 from django.utils import translation
 from django.utils.deprecation import MiddlewareMixin
-
-from constance import config
 
 
 def sopds_auth_required(view_func):

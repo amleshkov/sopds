@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from constance import config
 from django.test import Client, TestCase
 from django.urls import reverse
-
-from constance import config
 
 PAYLOADS = ["'", '"', "';--", "\\", "' union select 1,2,3 --"]
 

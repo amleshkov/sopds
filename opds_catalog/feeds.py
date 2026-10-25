@@ -1,3 +1,4 @@
+from constance import config
 from django.contrib.syndication.views import Feed
 from django.db.models import Count, Min
 from django.http import Http404
@@ -10,7 +11,6 @@ from django.utils.translation import gettext as _
 
 from book_tools.format import mime_detector
 from book_tools.format.mimetype import Mimetype
-from constance import config
 from opds_catalog import models, settings
 from opds_catalog.middleware import BasicAuthMiddleware
 from opds_catalog.models import (

@@ -2,11 +2,11 @@
 
 from urllib.parse import quote
 
+from constance import config
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from constance import config
 from opds_catalog.models import Book, bookshelf
 
 

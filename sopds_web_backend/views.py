@@ -18,6 +18,7 @@ except ImportError:
     from django.utils.http import is_safe_url as url_has_allowed_host_and_scheme
 
 from constance import config
+
 from opds_catalog import models, settings
 from opds_catalog.models import (
     Author,
