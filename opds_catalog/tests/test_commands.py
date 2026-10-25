@@ -127,7 +127,7 @@ class scannerHandleScanTestCase(TestCase):
         out = StringIO()
         call_command('sopds_scanner', 'scan', stdout=out)
         from opds_catalog.models import Book
-        self.assertEqual(Book.objects.count(), 4)
+        self.assertEqual(Book.objects.count(), 6)
 
     def test_update_shedule(self):
         cmd = self._command()

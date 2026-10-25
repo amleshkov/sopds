@@ -5,9 +5,12 @@ from xml import sax
 
 from constance import config
 
+from book_tools.format.epub import EPub
 from book_tools.format.fb2 import FB2, FB2Zip
 from book_tools.format.fb2sax import FB2sax
 from book_tools.format.mimetype import Mimetype
+from book_tools.format.mobi import Mobipocket
+from book_tools.format.other import Dummy
 from book_tools.format.util import list_zip_file_infos
 
 
@@ -18,8 +21,22 @@ class mime_detector:
             return Mimetype.XML
         elif fmt.lower() == 'fb2':
             return Mimetype.FB2
+        elif fmt.lower() == 'epub':
+            return Mimetype.EPUB
+        elif fmt.lower() == 'mobi':
+            return Mimetype.MOBI
         elif fmt.lower() == 'zip':
             return Mimetype.ZIP
+        elif fmt.lower() == 'pdf':
+            return Mimetype.PDF
+        elif fmt.lower() == 'djvu':
+            return Mimetype.DJVU
+        elif fmt.lower() == 'txt':
+            return Mimetype.TEXT
+        elif fmt.lower() == 'rtf':
+            return Mimetype.RTF
+        elif fmt.lower() == 'doc' or fmt.lower() == 'docx':
+            return Mimetype.MSWORD
         else:
             return Mimetype.OCTET_STREAM
 
@@ -44,6 +61,17 @@ def detect_mime(file, original_filename):
                     if len(infolist) == 1:
                         if FB2_ROOT == __xml_root_tag(zip_file.open(infolist[0])):
                             return Mimetype.FB2_ZIP
+                    try:
+                        with zip_file.open('mimetype') as mimetype_file:
+                            if mimetype_file.read(30).decode().rstrip('\n\r') == Mimetype.EPUB:
+                                return Mimetype.EPUB
+                    except Exception:
+                        pass
+        elif mime == Mimetype.OCTET_STREAM:
+            mobiflag = file.read(68)
+            mobiflag = mobiflag[60:]
+            if mobiflag.decode() == 'BOOKMOBI':
+                return Mimetype.MOBI
     except Exception:
         pass
 
@@ -56,10 +84,16 @@ def create_bookfile(file, original_filename):
         file = open(file, 'rb')
     file = BytesIO(file.read())
     mimetype = detect_mime(file, original_filename)
+    if mimetype == Mimetype.EPUB:
+        return EPub(file, original_filename)
+    if mimetype == Mimetype.MOBI:
+        return Mobipocket(file, original_filename)
     if mimetype == Mimetype.FB2:
         return FB2sax(file, original_filename) if config.SOPDS_FB2SAX else FB2(file, original_filename)
     if mimetype == Mimetype.FB2_ZIP:
         return FB2Zip(file, original_filename)
+    if mimetype in [Mimetype.TEXT, Mimetype.PDF, Mimetype.MSWORD, Mimetype.RTF, Mimetype.DJVU]:
+        return Dummy(file, original_filename, mimetype)
     return None
 
 
