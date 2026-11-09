@@ -1,6 +1,6 @@
 [project]
 name = "sopds"
-version = "0.47.1"
+version = "1.0.0"
 description = "SimpleOPDS catalog server (modernized fork)"
 requires-python = ">=3.12"
 dependencies = [

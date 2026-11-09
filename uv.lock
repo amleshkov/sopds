@@ -431,7 +431,7 @@ wheels = [
 
 [[package]]
 name = "sopds"
-version = "0.47.1"
+version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "apscheduler" },
